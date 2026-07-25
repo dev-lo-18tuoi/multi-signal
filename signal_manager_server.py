@@ -33,7 +33,7 @@ LOG_FILE = STATE_DIR / "server.log"
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$")
 COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 BASE = Path.home() / "Library" / "Application Support"
-VERSION = "2.1.0"
+VERSION = "2.2.0"
 
 TOKEN = ""  # set in serve()
 
@@ -264,13 +264,20 @@ def open_browser(url):
     subprocess.run(["open", url], check=False)
 
 
-def launch():
+def launch(open_in_browser=True):
+    """Đảm bảo server đúng version đang chạy; mở browser hoặc chỉ in URL."""
+    def done(info):
+        url = "http://127.0.0.1:%d/?token=%s" % (info["port"], info["token"])
+        if open_in_browser:
+            open_browser(url)
+        else:
+            print(url)
+
     info = read_runtime()
     if info:
         ver = ping(info)
         if ver == VERSION:
-            open_browser("http://127.0.0.1:%d/?token=%s" % (info["port"], info["token"]))
-            return
+            return done(info)
         if ver is not None:
             # server cũ khác version → thay bằng bản mới
             try:
@@ -290,8 +297,7 @@ def launch():
         time.sleep(0.1)
         info = read_runtime()
         if info and ping(info, timeout=0.3) == VERSION:
-            open_browser("http://127.0.0.1:%d/?token=%s" % (info["port"], info["token"]))
-            return
+            return done(info)
     sys.exit("Không khởi động được server — xem log: %s" % LOG_FILE)
 
 
@@ -299,5 +305,7 @@ if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else "--launch"
     if mode == "--serve":
         serve()
+    elif mode == "--url":
+        launch(open_in_browser=False)
     else:
         launch()

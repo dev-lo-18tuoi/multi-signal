@@ -9,7 +9,7 @@
 set -euo pipefail
 
 REPO="${SIGNAL_MANAGER_REPO:-https://raw.githubusercontent.com/dev-lo-18tuoi/multi-signal/main}"
-FILES=(signal-manager.sh signal_manager_server.py signal-manager-ui.html)
+FILES=(signal-manager.sh signal_manager_server.py signal-manager-ui.html SignalManagerApp.swift)
 
 say() { printf '%s\n' "$*"; }
 

@@ -320,25 +320,59 @@ cmd_menu() { # mở dashboard: ủy quyền cho server Python nằm cùng thư m
 }
 
 cmd_install() {
-  local app="$LAUNCHER_DIR/Signal Manager.app" here icns f
+  local app="$LAUNCHER_DIR/Signal Manager.app" here icns f native=0
   here="$(cd "$(dirname "$0")" && pwd)"
   for f in signal-manager.sh signal_manager_server.py signal-manager-ui.html; do
     [[ -f "$here/$f" ]] || die "thiếu file $f trong $here"
   done
   mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
-  for f in signal-manager.sh signal_manager_server.py signal-manager-ui.html; do
-    cp "$here/$f" "$app/Contents/Resources/$f"
+  for f in signal-manager.sh signal_manager_server.py signal-manager-ui.html SignalManagerApp.swift; do
+    [[ -f "$here/$f" ]] && cp "$here/$f" "$app/Contents/Resources/$f"
   done
   chmod +x "$app/Contents/Resources/signal-manager.sh"
-  cat > "$app/Contents/MacOS/launcher" <<'EOF'
+  # Ưu tiên launcher native (cửa sổ WKWebView riêng) — compile cục bộ nên không
+  # dính Gatekeeper. Thiếu swiftc/compile lỗi → fallback mở dashboard qua browser.
+  if command -v swiftc >/dev/null 2>&1 && [[ -f "$app/Contents/Resources/SignalManagerApp.swift" ]]; then
+    printf 'Đang biên dịch cửa sổ native (lần đầu có thể mất ~20s)...\n'
+    if swiftc -O "$app/Contents/Resources/SignalManagerApp.swift" \
+        -o "$app/Contents/MacOS/launcher" \
+        -framework Cocoa -framework WebKit 2>/tmp/signal-manager-swiftc.log; then
+      native=1
+    else
+      printf 'Biên dịch native thất bại (xem /tmp/signal-manager-swiftc.log) — dùng chế độ trình duyệt.\n'
+    fi
+  fi
+  if [[ $native -eq 0 ]]; then
+    cat > "$app/Contents/MacOS/launcher" <<'EOF'
 #!/bin/sh
 exec /usr/bin/env python3 "$(dirname "$0")/../Resources/signal_manager_server.py" --launch
 EOF
-  chmod +x "$app/Contents/MacOS/launcher"
+    chmod +x "$app/Contents/MacOS/launcher"
+  fi
   icns=$(find "$SIGNAL_APP/Contents/Resources" -maxdepth 1 -name '*.icns' -print -quit 2>/dev/null)
   [[ -n $icns ]] && cp "$icns" "$app/Contents/Resources/icon.icns"
-  write_plist "$app" "Signal Manager" "local.signal-manager"
-  printf 'Đã cài: %s\n(chạy lại "install" sau khi sửa code để cập nhật app)\n' "$app"
+  cat > "$app/Contents/Info.plist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleExecutable</key><string>launcher</string>
+  <key>CFBundleIconFile</key><string>icon</string>
+  <key>CFBundleIdentifier</key><string>local.signal-manager</string>
+  <key>CFBundleName</key><string>Signal Manager</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSAppTransportSecurity</key>
+  <dict><key>NSAllowsLocalNetworking</key><true/></dict>
+</dict>
+</plist>
+EOF
+  if [[ $native -eq 1 ]]; then
+    printf 'Đã cài (cửa sổ NATIVE): %s\n' "$app"
+  else
+    printf 'Đã cài (chế độ trình duyệt): %s\n' "$app"
+  fi
+  printf '(chạy lại "install" sau khi sửa code để cập nhật app)\n'
 }
 
 main() {
