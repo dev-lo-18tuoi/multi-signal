@@ -52,6 +52,19 @@ signal-manager install
 
 (Formula nằm tại tap `dev-lo-18tuoi/homebrew-signal-manager` — xem `packaging/homebrew/`.)
 
+## 🪟 Windows (BETA)
+
+Chạy trong PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/dev-lo-18tuoi/multi-signal/main/install-windows.ps1 | iex
+```
+
+Bản Windows hiện là **CLI beta** (`add / open / quit / list / autostart / remove` + shortcut
+Desktop cho từng account, tự mở khi đăng nhập qua registry Run). Cùng cơ chế
+`--user-data-dir` như bản Mac. Dashboard web sẽ lên Windows ở bản sau.
+Beta = chưa test trên máy Windows thật — gặp lỗi xin mở issue kèm log.
+
 ## Dùng CLI (tùy chọn)
 
 ```text
