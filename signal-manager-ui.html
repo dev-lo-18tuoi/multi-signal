@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signal Manager</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161b22; --panel2:#1c232d; --border:#2a3341;
+    --text:#e9edf2; --muted:#8b96a5; --accent:#3a76f0; --accent2:#2f62c9;
+    --ok:#32d74b; --danger:#ff453a; --warn:#ffd60a;
+    --radius:14px; --shadow:0 8px 28px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(1200px 500px at 20% -10%, #16203a 0%, var(--bg) 55%);
+    color:var(--text);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* ===== Header ===== */
+  header{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; gap:14px;
+    padding:16px 26px; backdrop-filter:blur(14px);
+    background:rgba(14,17,22,.72); border-bottom:1px solid var(--border);
+  }
+  .logo{
+    width:38px;height:38px;border-radius:11px;flex:none;
+    background:linear-gradient(135deg,#3a76f0,#7aa8ff);
+    display:grid;place-items:center;font-weight:800;font-size:19px;color:#fff;
+    box-shadow:0 4px 14px rgba(58,118,240,.4);
+  }
+  .htitle{margin-right:auto}
+  .htitle h1{font-size:17px;font-weight:700;letter-spacing:.2px}
+  .htitle p{font-size:12.5px;color:var(--muted)}
+  .btn{
+    border:1px solid var(--border); background:var(--panel2); color:var(--text);
+    padding:8px 14px; border-radius:10px; font-size:13.5px; font-weight:600;
+    cursor:pointer; transition:.15s; display:inline-flex; align-items:center; gap:7px;
+  }
+  .btn:hover{border-color:#3b465a; background:#232c39; transform:translateY(-1px)}
+  .btn:active{transform:translateY(0)}
+  .btn.primary{background:var(--accent); border-color:var(--accent)}
+  .btn.primary:hover{background:var(--accent2)}
+  .btn.ghost{background:transparent}
+  .btn.danger{background:var(--danger); border-color:var(--danger); color:#fff}
+  .btn:disabled{opacity:.45; cursor:not-allowed; transform:none}
+  /* ===== Grid ===== */
+  main{max-width:1060px; margin:0 auto; padding:28px 26px 80px}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(310px,1fr)); gap:18px}
+  .card{
+    background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
+    padding:18px; box-shadow:var(--shadow); transition:.18s; position:relative;
+  }
+  .card:hover{transform:translateY(-2px); border-color:#39445a}
+  .card-top{display:flex; align-items:center; gap:13px}
+  .avatar{
+    width:46px;height:46px;border-radius:50%;flex:none;
+    display:grid;place-items:center;font-weight:800;font-size:19px;color:#fff;
+  }
+  .cinfo{min-width:0; margin-right:auto}
+  .cname{font-weight:700; font-size:15.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .ctag{font-family:ui-monospace,SF Mono,Menlo,monospace; font-size:11.5px; color:var(--muted)}
+  .kebab{
+    border:none;background:transparent;color:var(--muted);font-size:19px;
+    width:32px;height:32px;border-radius:8px;cursor:pointer;flex:none;
+  }
+  .kebab:hover{background:var(--panel2); color:var(--text)}
+  .menu{
+    position:absolute; right:14px; top:56px; z-index:20; min-width:210px;
+    background:var(--panel2); border:1px solid var(--border); border-radius:12px;
+    box-shadow:var(--shadow); overflow:hidden; display:none;
+  }
+  .menu.open{display:block}
+  .menu button{
+    display:block; width:100%; text-align:left; padding:10px 15px; border:none;
+    background:transparent; color:var(--text); font-size:13.5px; cursor:pointer;
+  }
+  .menu button:hover{background:#28313f}
+  .menu button.mdanger{color:var(--danger)}
+  .menu hr{border:none;border-top:1px solid var(--border)}
+  .cmid{display:flex; align-items:center; gap:10px; margin:14px 0 15px}
+  .pill{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:12.5px; font-weight:600; padding:4px 11px; border-radius:999px;
+  }
+  .pill .dot{width:7px;height:7px;border-radius:50%}
+  .pill.on{background:rgba(50,215,75,.12); color:var(--ok)}
+  .pill.on .dot{background:var(--ok); box-shadow:0 0 8px var(--ok)}
+  .pill.off{background:rgba(139,150,165,.12); color:var(--muted)}
+  .pill.off .dot{background:var(--muted)}
+  .size{font-size:12.5px; color:var(--muted)}
+  .cbtns{display:flex; gap:9px}
+  .cbtns .btn{flex:1; justify-content:center}
+  /* ===== Modal ===== */
+  .overlay{
+    position:fixed; inset:0; z-index:100; display:none;
+    background:rgba(5,8,12,.6); backdrop-filter:blur(6px);
+    align-items:center; justify-content:center; padding:20px;
+  }
+  .overlay.open{display:flex}
+  .modal{
+    width:100%; max-width:430px; background:var(--panel); border:1px solid var(--border);
+    border-radius:18px; box-shadow:var(--shadow); padding:24px; animation:pop .18s ease;
+  }
+  @keyframes pop{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
+  .modal h2{font-size:17px; margin-bottom:6px}
+  .modal .sub{font-size:13.5px; color:var(--muted); margin-bottom:16px}
+  .modal input[type=text]{
+    width:100%; padding:11px 13px; border-radius:10px; border:1px solid var(--border);
+    background:var(--bg); color:var(--text); font-size:14.5px; outline:none;
+  }
+  .modal input[type=text]:focus{border-color:var(--accent)}
+  .hint{font-size:12.5px; margin-top:7px; color:var(--muted); min-height:18px}
+  .hint.bad{color:var(--danger)}
+  .mbtns{display:flex; gap:10px; margin-top:18px; justify-content:flex-end}
+  .steps{margin:14px 0 4px; display:grid; gap:11px}
+  .step{display:flex; gap:11px; align-items:flex-start; font-size:13.5px}
+  .stepn{
+    width:22px;height:22px;border-radius:50%;flex:none;background:var(--accent);
+    color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700;margin-top:1px;
+  }
+  .warnbox{
+    background:rgba(255,69,58,.08); border:1px solid rgba(255,69,58,.35);
+    border-radius:11px; padding:12px 14px; font-size:13px; margin:13px 0;
+  }
+  label.chk{display:flex; gap:9px; align-items:flex-start; font-size:13.5px; cursor:pointer; margin-top:4px}
+  label.chk input{margin-top:3px; accent-color:var(--danger)}
+  .swatches{display:flex; gap:11px; flex-wrap:wrap; margin:16px 0 4px}
+  .sw{width:36px;height:36px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:.12s}
+  .sw:hover{transform:scale(1.12)}
+  .sw.sel{border-color:#fff}
+  /* ===== Toast ===== */
+  #toasts{position:fixed; bottom:22px; left:50%; transform:translateX(-50%); z-index:200; display:grid; gap:9px}
+  .toast{
+    background:var(--panel2); border:1px solid var(--border); color:var(--text);
+    padding:11px 18px; border-radius:11px; font-size:13.5px; box-shadow:var(--shadow);
+    animation:pop .18s ease; max-width:80vw;
+  }
+  .toast.err{border-color:rgba(255,69,58,.5); color:#ffb3ae}
+  .toast.ok{border-color:rgba(50,215,75,.4)}
+  footer{
+    max-width:1060px; margin:0 auto; padding:0 26px 30px;
+    font-size:12px; color:var(--muted);
+  }
+  .spin{
+    width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.25);
+    border-top-color:#fff; animation:spin .7s linear infinite; display:inline-block;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">S</div>
+  <div class="htitle">
+    <h1>Signal Manager</h1>
+    <p id="subtitle">Đang tải…</p>
+  </div>
+  <button class="btn" id="btnOpenAll">▶ Mở tất cả</button>
+  <button class="btn ghost" id="btnQuitAll">⏹ Tắt tất cả</button>
+  <button class="btn primary" id="btnAdd">＋ Thêm account</button>
+</header>
+
+<main><div class="grid" id="grid"></div></main>
+<footer id="footer"></footer>
+
+<!-- Modal: thêm account -->
+<div class="overlay" id="ovAdd">
+  <div class="modal">
+    <div id="addStep1">
+      <h2>Thêm account Signal</h2>
+      <p class="sub">Mỗi account cần một số điện thoại riêng đã đăng ký Signal trên điện thoại.</p>
+      <input type="text" id="addName" placeholder="Tên gợi nhớ, ví dụ: congviec" maxlength="32" autocomplete="off">
+      <div class="hint" id="addHint">Chỉ dùng chữ, số, gạch ngang, gạch dưới.</div>
+      <div class="mbtns">
+        <button class="btn ghost" data-close>Hủy</button>
+        <button class="btn primary" id="addGo" disabled>Tạo account</button>
+      </div>
+    </div>
+    <div id="addStep2" style="display:none">
+      <h2>✅ Đã tạo — giờ liên kết điện thoại</h2>
+      <div class="steps">
+        <div class="step"><div class="stepn">1</div><div>Một cửa sổ Signal mới vừa mở kèm <b>mã QR</b> — kéo nó ra cạnh bên.</div></div>
+        <div class="step"><div class="stepn">2</div><div>Trên điện thoại giữ số của account này: <b>Signal → Cài đặt → Thiết bị đã liên kết → Liên kết thiết bị mới</b>.</div></div>
+        <div class="step"><div class="stepn">3</div><div>Quét mã QR rồi chờ đồng bộ vài phút. Xong!</div></div>
+      </div>
+      <div class="mbtns"><button class="btn primary" data-close>Đã hiểu</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: xóa account -->
+<div class="overlay" id="ovDel">
+  <div class="modal">
+    <h2>Xóa account <span id="delName"></span>?</h2>
+    <p class="sub" id="delSize"></p>
+    <div class="warnbox">
+      Chỉ xóa dữ liệu <b>trên máy Mac này</b> — tin nhắn trên điện thoại không mất.
+      Sau khi xóa, nhớ vào điện thoại gỡ thiết bị: <i>Cài đặt → Thiết bị đã liên kết</i>.
+    </div>
+    <div id="delRunning" style="display:none">
+      <p class="sub">⚠️ Account này đang chạy — cần tắt trước khi xóa.</p>
+      <div class="mbtns">
+        <button class="btn ghost" data-close>Hủy</button>
+        <button class="btn" id="delQuitFirst">⏹ Tắt account này</button>
+      </div>
+    </div>
+    <div id="delReady">
+      <label class="chk"><input type="checkbox" id="delChk">Tôi hiểu dữ liệu account này trên máy sẽ bị xóa vĩnh viễn.</label>
+      <div class="mbtns">
+        <button class="btn ghost" data-close>Hủy</button>
+        <button class="btn danger" id="delGo" disabled>Xóa vĩnh viễn</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: đổi tên hiển thị -->
+<div class="overlay" id="ovRename">
+  <div class="modal">
+    <h2>Tên hiển thị</h2>
+    <p class="sub">Đặt tên gợi nhớ (ví dụ: Công việc, Gia đình) — chỉ đổi cách hiển thị ở đây, không ảnh hưởng Signal.</p>
+    <input type="text" id="renameInput" maxlength="40" autocomplete="off">
+    <div class="mbtns">
+      <button class="btn ghost" data-close>Hủy</button>
+      <button class="btn primary" id="renameGo">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: đổi màu -->
+<div class="overlay" id="ovColor">
+  <div class="modal">
+    <h2>Màu đại diện</h2>
+    <p class="sub">Chọn màu để phân biệt account thoáng qua là nhận ra.</p>
+    <div class="swatches" id="swatches"></div>
+    <div class="mbtns"><button class="btn ghost" data-close>Đóng</button></div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+'use strict';
+const token = new URLSearchParams(location.search).get('token') || '';
+const PALETTE = ['#3A76F0','#34C759','#FF9F0A','#FF453A','#BF5AF2','#5AC8FA','#FFD60A','#FF2D55'];
+let profiles = [];          // state hiện tại
+let sizeCache = {};         // name -> size_kb (giữ qua các lần poll fast)
+let busy = {};              // name -> 'opening' | 'quitting'
+let renderKey = '';
+let modalTarget = null;     // account đang thao tác trong modal
+
+// ---------- API ----------
+async function api(path, body) {
+  const res = await fetch(path, {
+    method: body ? 'POST' : 'GET',
+    headers: {'X-Token': token, 'Content-Type': 'application/json'},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+  return data;
+}
+
+// ---------- Helpers ----------
+const $ = s => document.querySelector(s);
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtSize(kb){
+  if (kb == null) return '…';
+  if (kb >= 1048576) return (kb/1048576).toFixed(1) + ' GB';
+  if (kb >= 1024) return Math.round(kb/1024) + ' MB';
+  return kb + ' KB';
+}
+function dispName(p){ return p.nickname || (p.is_default ? 'Signal chính' : p.name); }
+function colorOf(p, i){ return p.color || PALETTE[i % PALETTE.length]; }
+function toast(msg, cls){
+  const t = document.createElement('div');
+  t.className = 'toast ' + (cls || '');
+  t.textContent = msg;
+  $('#toasts').appendChild(t);
+  setTimeout(() => t.remove(), 3800);
+}
+function openModal(id){ $(id).classList.add('open'); }
+function closeModals(){ document.querySelectorAll('.overlay').forEach(o => o.classList.remove('open')); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModals(); });
+document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeModals));
+document.querySelectorAll('.overlay').forEach(o =>
+  o.addEventListener('click', e => { if (e.target === o) closeModals(); }));
+
+// ---------- Render ----------
+function render(){
+  const key = JSON.stringify([profiles, busy, sizeCache]);
+  if (key === renderKey) return;
+  renderKey = key;
+
+  const running = profiles.filter(p => p.running).length;
+  $('#subtitle').textContent = profiles.length + ' account · ' + running + ' đang chạy';
+
+  const grid = $('#grid');
+  grid.innerHTML = profiles.map((p, i) => {
+    const c = colorOf(p, i);
+    const b = busy[p.name];
+    const pill = b === 'opening' ? '<span class="pill on"><span class="spin"></span>Đang mở…</span>'
+      : b === 'quitting' ? '<span class="pill off"><span class="spin"></span>Đang tắt…</span>'
+      : p.running ? '<span class="pill on"><span class="dot"></span>Đang chạy</span>'
+      : '<span class="pill off"><span class="dot"></span>Đang tắt</span>';
+    const mainBtn = p.running
+      ? `<button class="btn" data-act="open" data-name="${esc(p.name)}">🔍 Focus cửa sổ</button>
+         <button class="btn ghost" data-act="quit" data-name="${esc(p.name)}">⏹ Tắt</button>`
+      : `<button class="btn primary" data-act="open" data-name="${esc(p.name)}">▶ Mở</button>`;
+    const kb = sizeCache[p.name];
+    return `
+    <div class="card">
+      <div class="card-top">
+        <div class="avatar" style="background:${c}">${esc(dispName(p).charAt(0).toUpperCase())}</div>
+        <div class="cinfo">
+          <div class="cname">${esc(dispName(p))}</div>
+          <div class="ctag">${p.is_default ? 'Bản chính' : 'Signal-' + esc(p.name)}</div>
+        </div>
+        <button class="kebab" data-menu="${esc(p.name)}">⋯</button>
+      </div>
+      <div class="menu" id="menu-${esc(p.name)}">
+        <button data-act="autostart" data-name="${esc(p.name)}">${p.autostart ? '⚡ Tắt tự mở khi bật máy' : '⚡ Tự mở khi bật máy'}</button>
+        <button data-act="rename" data-name="${esc(p.name)}">✏️ Đổi tên hiển thị</button>
+        <button data-act="color" data-name="${esc(p.name)}">🎨 Đổi màu đại diện</button>
+        <button data-act="reveal" data-name="${esc(p.name)}">📁 Mở thư mục dữ liệu</button>
+        ${p.is_default ? '' : '<hr><button class="mdanger" data-act="del" data-name="' + esc(p.name) + '">🗑 Xóa account…</button>'}
+      </div>
+      <div class="cmid">${pill}<span class="size">${fmtSize(kb)}</span>${p.autostart ? '<span class="size" title="Tự mở khi đăng nhập Mac">⚡ tự mở</span>' : ''}</div>
+      <div class="cbtns">${mainBtn}</div>
+    </div>`;
+  }).join('');
+}
+
+// ---------- Poll ----------
+async function refresh(fast){
+  try {
+    const data = await api('/api/state' + (fast ? '?fast=1' : ''));
+    profiles = data.profiles;
+    updateFooter(data.version);
+    for (const p of profiles) {
+      if (p.size_kb != null) sizeCache[p.name] = p.size_kb;
+      // trạng thái thật đã đổi → bỏ cờ busy
+      if (busy[p.name] === 'opening' && p.running) delete busy[p.name];
+      if (busy[p.name] === 'quitting' && !p.running) delete busy[p.name];
+    }
+    render();
+  } catch (e) {
+    $('#subtitle').textContent = '⚠️ Mất kết nối server — mở lại Signal Manager.app';
+  }
+}
+setInterval(() => refresh(true), 3000);
+setInterval(() => refresh(false), 45000);
+refresh(false);
+
+// ---------- Actions ----------
+async function doAction(act, name){
+  const p = profiles.find(x => x.name === name);
+  try {
+    if (act === 'open') {
+      busy[name] = p && p.running ? undefined : 'opening';
+      if (busy[name] === undefined) delete busy[name];
+      render();
+      await api('/api/open', {name});
+      if (p && p.running) toast('Đã focus cửa sổ ' + dispName(p), 'ok');
+    } else if (act === 'quit') {
+      busy[name] = 'quitting'; render();
+      await api('/api/quit', {name});
+    } else if (act === 'reveal') {
+      await api('/api/reveal', {name});
+    } else if (act === 'autostart') {
+      const enable = !(p && p.autostart);
+      await api('/api/autostart', {name, enable});
+      toast(enable ? '⚡ Sẽ tự mở ' + dispName(p) + ' khi bật máy' : 'Đã tắt tự mở ' + dispName(p), 'ok');
+    }
+    setTimeout(() => refresh(true), 1200);
+  } catch (e) {
+    delete busy[name]; render();
+    toast(e.message, 'err');
+  }
+}
+
+document.addEventListener('click', e => {
+  const menuBtn = e.target.closest('[data-menu]');
+  document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open'));
+  if (menuBtn) {
+    e.stopPropagation();
+    document.getElementById('menu-' + menuBtn.dataset.menu).classList.add('open');
+    return;
+  }
+  const btn = e.target.closest('[data-act]');
+  if (!btn) return;
+  const {act, name} = btn.dataset;
+  const p = profiles.find(x => x.name === name);
+  if (act === 'del')      { openDelModal(p); }
+  else if (act === 'rename') {
+    modalTarget = p;
+    $('#renameInput').value = p.nickname || '';
+    openModal('#ovRename'); $('#renameInput').focus();
+  }
+  else if (act === 'color') { openColorModal(p); }
+  else doAction(act, name);
+});
+
+// Header
+$('#btnOpenAll').addEventListener('click', async () => {
+  profiles.forEach(p => { if (!p.running) busy[p.name] = 'opening'; }); render();
+  try { await api('/api/open-all', {}); toast('Đang mở tất cả account…', 'ok'); }
+  catch (e) { busy = {}; toast(e.message, 'err'); }
+  setTimeout(() => refresh(true), 1500);
+});
+$('#btnQuitAll').addEventListener('click', async () => {
+  profiles.forEach(p => { if (p.running) busy[p.name] = 'quitting'; }); render();
+  try { await api('/api/quit-all', {}); toast('Đã gửi lệnh tắt tất cả', 'ok'); }
+  catch (e) { busy = {}; toast(e.message, 'err'); }
+  setTimeout(() => refresh(true), 1500);
+});
+
+// Add
+const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$/;
+$('#btnAdd').addEventListener('click', () => {
+  $('#addStep1').style.display = ''; $('#addStep2').style.display = 'none';
+  $('#addName').value = ''; $('#addGo').disabled = true;
+  $('#addHint').className = 'hint'; $('#addHint').textContent = 'Chỉ dùng chữ, số, gạch ngang, gạch dưới.';
+  openModal('#ovAdd'); $('#addName').focus();
+});
+$('#addName').addEventListener('input', () => {
+  const v = $('#addName').value.trim();
+  const exists = profiles.some(p => p.name === v);
+  const ok = NAME_RE.test(v) && !exists;
+  $('#addGo').disabled = !ok;
+  const h = $('#addHint');
+  if (!v) { h.className = 'hint'; h.textContent = 'Chỉ dùng chữ, số, gạch ngang, gạch dưới.'; }
+  else if (exists) { h.className = 'hint bad'; h.textContent = 'Tên này đã tồn tại.'; }
+  else if (!ok) { h.className = 'hint bad'; h.textContent = 'Tên không hợp lệ — chỉ chữ/số/-/_, bắt đầu bằng chữ hoặc số.'; }
+  else { h.className = 'hint'; h.textContent = '✓ Tên hợp lệ'; }
+});
+$('#addName').addEventListener('keydown', e => { if (e.key === 'Enter' && !$('#addGo').disabled) $('#addGo').click(); });
+$('#addGo').addEventListener('click', async () => {
+  const name = $('#addName').value.trim();
+  $('#addGo').disabled = true;
+  $('#addGo').innerHTML = '<span class="spin"></span> Đang tạo…';
+  try {
+    await api('/api/add', {name});
+    $('#addStep1').style.display = 'none'; $('#addStep2').style.display = '';
+    busy[name] = 'opening';
+    setTimeout(() => refresh(false), 1500);
+  } catch (e) { toast(e.message, 'err'); }
+  $('#addGo').innerHTML = 'Tạo account'; $('#addGo').disabled = false;
+});
+
+// Delete
+function openDelModal(p){
+  modalTarget = p;
+  $('#delName').textContent = dispName(p);
+  $('#delSize').textContent = 'Dữ liệu trên máy: ' + fmtSize(sizeCache[p.name]) + ' · Signal-' + p.name;
+  $('#delChk').checked = false; $('#delGo').disabled = true;
+  const running = !!p.running;
+  $('#delRunning').style.display = running ? '' : 'none';
+  $('#delReady').style.display = running ? 'none' : '';
+  openModal('#ovDel');
+}
+$('#delChk').addEventListener('change', () => { $('#delGo').disabled = !$('#delChk').checked; });
+$('#delQuitFirst').addEventListener('click', async () => {
+  try {
+    await api('/api/quit', {name: modalTarget.name});
+    toast('Đang tắt ' + dispName(modalTarget) + '…', 'ok');
+    setTimeout(async () => {
+      await refresh(true);
+      const p = profiles.find(x => x.name === modalTarget.name);
+      if (p && !p.running) openDelModal(p);
+    }, 2000);
+  } catch (e) { toast(e.message, 'err'); }
+});
+$('#delGo').addEventListener('click', async () => {
+  $('#delGo').disabled = true;
+  $('#delGo').innerHTML = '<span class="spin"></span> Đang xóa…';
+  try {
+    await api('/api/remove', {name: modalTarget.name});
+    toast('Đã xóa account ' + dispName(modalTarget), 'ok');
+    closeModals();
+    delete sizeCache[modalTarget.name];
+    refresh(false);
+  } catch (e) { toast(e.message, 'err'); }
+  $('#delGo').innerHTML = 'Xóa vĩnh viễn';
+});
+
+// Rename
+$('#renameGo').addEventListener('click', async () => {
+  try {
+    await api('/api/meta', {name: modalTarget.name, nickname: $('#renameInput').value.trim()});
+    closeModals(); refresh(true);
+  } catch (e) { toast(e.message, 'err'); }
+});
+$('#renameInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('#renameGo').click(); });
+
+// Color
+function openColorModal(p){
+  modalTarget = p;
+  const cur = colorOf(p, profiles.indexOf(p));
+  $('#swatches').innerHTML = PALETTE.map(c =>
+    `<div class="sw ${c.toLowerCase() === cur.toLowerCase() ? 'sel' : ''}" style="background:${c}" data-color="${c}"></div>`
+  ).join('');
+  openModal('#ovColor');
+}
+$('#swatches').addEventListener('click', async e => {
+  const sw = e.target.closest('[data-color]');
+  if (!sw) return;
+  try {
+    await api('/api/meta', {name: modalTarget.name, color: sw.dataset.color});
+    closeModals(); refresh(true);
+  } catch (e2) { toast(e2.message, 'err'); }
+});
+
+// Footer
+function updateFooter(v){
+  $('#footer').textContent = 'Dữ liệu: ~/Library/Application Support/Signal-* · '
+    + 'Tool không chính thức, không liên quan Signal Messenger LLC.' + (v ? ' · v' + v : '');
+}
+updateFooter();
+if (!token) toast('Thiếu token — hãy mở từ Signal Manager.app', 'err');
+</script>
+</body>
+</html>
