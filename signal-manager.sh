@@ -262,6 +262,56 @@ Mở lại sau này: ~/Applications/Signal $name.app
 EOF
 }
 
+# Màu đại diện theo tên account (ổn định, khớp tinh thần bảng màu dashboard)
+profile_color() {
+  local palette=("#3A76F0" "#34C759" "#FF9F0A" "#FF453A" "#BF5AF2" "#5AC8FA" "#E6B800" "#FF2D55")
+  local sum
+  sum=$(printf '%s' "$1" | cksum | cut -d' ' -f1)
+  printf '%s' "${palette[$((sum % 8))]}"
+}
+
+# Icon .icns riêng cho account: squircle màu riêng + nhãn tên to — nhìn Dock là
+# phân biệt được ngay, không nhầm với Signal thật. Cần qlmanage/sips/iconutil
+# (đều có sẵn macOS); lỗi thì caller tự fallback icon Signal.
+make_profile_icon() { # $1=tên $2=đường dẫn .icns đích
+  local name=$1 dest=$2 color label size tmp s d
+  color=$(profile_color "$name")
+  label=$(printf '%s' "$name" | tr '[:lower:]' '[:upper:]' | cut -c1-3)
+  case ${#label} in 1) size=430 ;; 2) size=330 ;; *) size=230 ;; esac
+  tmp=$(mktemp -d) || return 1
+  cat > "$tmp/icon.svg" <<EOF
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="$color"/>
+      <stop offset="1" stop-color="#141021"/>
+    </linearGradient>
+    <clipPath id="sq"><rect x="100" y="100" width="824" height="824" rx="186"/></clipPath>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#g)"/>
+  <g clip-path="url(#sq)">
+    <g fill="none" stroke="#ffffff" stroke-linecap="round">
+      <path d="M 736,236 A 56,56 0 0 1 792,292" stroke-width="24" opacity="0.85"/>
+      <path d="M 736,200 A 92,92 0 0 1 828,292" stroke-width="22" opacity="0.5"/>
+    </g>
+    <text x="512" y="540" font-family="Menlo, monospace" font-size="$size" font-weight="bold"
+          fill="#ffffff" text-anchor="middle" dominant-baseline="central">$label</text>
+    <path d="M100,762 Q 260,722 420,762 T 740,762 T 1060,762 L 1060,924 L 100,924 Z" fill="#000" opacity="0.28"/>
+  </g>
+</svg>
+EOF
+  qlmanage -t -s 1024 -o "$tmp" "$tmp/icon.svg" >/dev/null 2>&1
+  [[ -f "$tmp/icon.svg.png" ]] || { rm -rf "$tmp"; return 1; }
+  mkdir -p "$tmp/i.iconset"
+  for s in 16 32 128 256 512; do
+    sips -z "$s" "$s" "$tmp/icon.svg.png" --out "$tmp/i.iconset/icon_${s}x${s}.png" >/dev/null 2>&1
+    d=$((s*2))
+    sips -z "$d" "$d" "$tmp/icon.svg.png" --out "$tmp/i.iconset/icon_${s}x${s}@2x.png" >/dev/null 2>&1
+  done
+  iconutil -c icns "$tmp/i.iconset" -o "$dest" 2>/dev/null || { rm -rf "$tmp"; return 1; }
+  rm -rf "$tmp"
+}
+
 make_launcher() { # tạo ~/Applications/Signal <tên>.app
   local name=$1 app icns
   check_signal
@@ -272,8 +322,11 @@ make_launcher() { # tạo ~/Applications/Signal <tên>.app
 exec "$SIGNAL_BIN" --user-data-dir="\$HOME/Library/Application Support/$PREFIX$name"
 EOF
   chmod +x "$app/Contents/MacOS/launcher"
-  icns=$(find "$SIGNAL_APP/Contents/Resources" -maxdepth 1 -name '*.icns' -print -quit)
-  [[ -n $icns ]] && cp "$icns" "$app/Contents/Resources/icon.icns"
+  # icon màu riêng theo account; lỗi thì dùng icon Signal
+  if ! make_profile_icon "$name" "$app/Contents/Resources/icon.icns"; then
+    icns=$(find "$SIGNAL_APP/Contents/Resources" -maxdepth 1 -name '*.icns' -print -quit)
+    [[ -n $icns ]] && cp "$icns" "$app/Contents/Resources/icon.icns"
+  fi
   write_plist "$app" "Signal $name" "local.signal-profile.$name"
   printf 'Launcher: %s\n' "$app"
 }
