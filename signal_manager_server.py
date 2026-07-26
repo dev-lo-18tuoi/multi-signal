@@ -34,7 +34,7 @@ LOG_FILE = STATE_DIR / "server.log"
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$")
 COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 BASE = Path.home() / "Library" / "Application Support"
-VERSION = "2.7.0"
+VERSION = "2.8.0"
 RAW_SELF = ("https://raw.githubusercontent.com/dev-lo-18tuoi/multi-signal/main/"
             "signal_manager_server.py")
 INSTALL_URL = ("https://raw.githubusercontent.com/dev-lo-18tuoi/multi-signal/main/"
@@ -219,6 +219,14 @@ class Handler(BaseHTTPRequestHandler):
                 target = "default" if name == "__default__" else name
                 mode = "on" if body.get("enable") else "off"
                 rc, out, err = engine("autostart", target, mode)
+            elif path == "/api/clean":
+                if name != "__default__" and not NAME_RE.match(name):
+                    return self._deny(400, "tên account không hợp lệ")
+                target = "default" if name == "__default__" else name
+                rc, out, err = engine("clean", target, timeout=120)
+                if rc == 0:
+                    m = re.search(r"FREED_KB=(\d+)", out)
+                    return self._json({"ok": True, "freed_kb": int(m.group(1)) if m else 0})
             elif path == "/api/reveal":
                 d = profile_path(name if name == "__default__" else name)
                 if name != "__default__" and not NAME_RE.match(name):

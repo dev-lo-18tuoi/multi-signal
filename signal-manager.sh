@@ -374,6 +374,45 @@ cmd_remove() {
   printf "Nhớ gỡ liên kết trên điện thoại: Cài đặt → Thiết bị đã liên kết.\n"
 }
 
+# Dọn cache Electron (Cache/Code Cache/GPUCache) — an toàn, Signal tự tạo lại.
+# KHÔNG đụng tin nhắn/khóa. Chỉ dọn khi account đang tắt. In FREED_KB=<số>.
+cmd_clean() { # $1=tên|default|all
+  local name=$1 dir freed_kb=0 n d
+  clean_one() { # $1=thư mục profile → in số KB giải phóng
+    local pdir=$1 b a sub
+    b=$(du -sk "$pdir" 2>/dev/null | cut -f1); b=${b:-0}
+    for sub in "Cache" "Code Cache" "GPUCache"; do
+      rm -rf "$pdir/$sub" 2>/dev/null || true
+    done
+    a=$(du -sk "$pdir" 2>/dev/null | cut -f1); a=${a:-0}
+    echo $(( b > a ? b - a : 0 ))
+  }
+  case $name in
+    all)
+      if [[ -d "$BASE/Signal" ]] && ! default_running; then
+        freed_kb=$(( freed_kb + $(clean_one "$BASE/Signal") ))
+      fi
+      while IFS= read -r n; do
+        d=$(profile_dir "$n")
+        is_running "$d" || freed_kb=$(( freed_kb + $(clean_one "$d") ))
+      done < <(profile_names)
+      ;;
+    default)
+      default_running && die "Signal chính đang chạy — tắt trước khi dọn cache"
+      [[ -d "$BASE/Signal" ]] || die "chưa có profile chính"
+      freed_kb=$(clean_one "$BASE/Signal")
+      ;;
+    *)
+      validate_name "$name"
+      dir=$(profile_dir "$name")
+      [[ -d $dir ]] || die "account '$name' không tồn tại"
+      is_running "$dir" && die "account '$name' đang chạy — tắt trước khi dọn cache"
+      freed_kb=$(clean_one "$dir")
+      ;;
+  esac
+  printf 'FREED_KB=%s\n' "$freed_kb"
+}
+
 cmd_menu() { # mở dashboard: ủy quyền cho server Python nằm cùng thư mục
   local here
   here="$(cd "$(dirname "$0")" && pwd)"
@@ -459,6 +498,7 @@ main() {
     quit)      [[ $# -ge 1 ]] || die "dùng: quit <tên>|all|default"; cmd_quit "$1" ;;
     remove|rm) [[ $# -ge 1 ]] || die "dùng: remove <tên> [--yes]"; cmd_remove "$@" ;;
     autostart) [[ $# -ge 2 ]] || die "dùng: autostart <tên>|default on|off"; cmd_autostart "$1" "$2" ;;
+    clean)     [[ $# -ge 1 ]] || die "dùng: clean <tên>|default|all"; cmd_clean "$1" ;;
     launcher)  [[ $# -ge 1 ]] || die "dùng: launcher <tên>"; validate_name "$1"; make_launcher "$1" ;;
     install)   cmd_install ;;
     uninstall) cmd_uninstall ;;

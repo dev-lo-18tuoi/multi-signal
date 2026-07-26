@@ -19,14 +19,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
   }
 
   func applicationDidFinishLaunching(_ note: Notification) {
-    // icon vịt thường trực trên thanh menu
+    // icon vịt thường trực trên thanh menu, kèm số account đang chạy (🦆2)
     statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     statusItem.button?.title = "🦆"
     let menu = NSMenu()
     menu.delegate = self
     statusItem.menu = menu
 
+    updateBadge()
+    Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in
+      self.updateBadge()
+    }
+
     showDashboard()
+  }
+
+  // cập nhật số account đang chạy trên icon menu bar (chạy nền, không chặn UI)
+  func updateBadge() {
+    DispatchQueue.global(qos: .utility).async {
+      let out = self.engineRead(["state", "--fast"])
+      var running = 0
+      if let d = out.data(using: .utf8),
+         let arr = (try? JSONSerialization.jsonObject(with: d)) as? [[String: Any]] {
+        running = arr.filter { ($0["running"] as? Bool) ?? false }.count
+      }
+      DispatchQueue.main.async {
+        self.statusItem.button?.title = running > 0 ? "🦆\(running)" : "🦆"
+      }
+    }
   }
 
   // ===== Cửa sổ dashboard =====
@@ -174,6 +194,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     menu.addItem(makeItem("🦆 Mở bảng điều khiển", #selector(openDash)))
     menu.addItem(.separator())
     menu.addItem(makeItem("Thoát Signal Manager", #selector(quitApp)))
+
+    updateBadge()   // tiện thể làm tươi số đếm mỗi lần mở menu
   }
 
   @objc private func openAccount(_ sender: NSMenuItem) {

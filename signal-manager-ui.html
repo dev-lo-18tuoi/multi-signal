@@ -307,6 +307,23 @@
   </div>
 </div>
 
+<!-- Modal: chào mừng lần đầu -->
+<div class="overlay" id="ovWelcome">
+  <div class="modal">
+    <h2 id="welTitle"></h2>
+    <p class="sub" id="welSub"></p>
+    <div class="steps">
+      <div class="step"><div class="stepn">1</div><div id="welS1"></div></div>
+      <div class="step"><div class="stepn">2</div><div id="welS2"></div></div>
+      <div class="step"><div class="stepn">3</div><div id="welS3"></div></div>
+    </div>
+    <div class="mbtns">
+      <button class="btn ghost" id="welSkip"></button>
+      <button class="btn primary" id="welCta"></button>
+    </div>
+  </div>
+</div>
+
 <div id="toasts"></div>
 
 <script>
@@ -365,6 +382,14 @@ vi: {
   conn_lost:'⚠️ Mất kết nối server — mở lại Signal Manager',
   footer:'Dữ liệu: ~/Library/Application Support/Signal-* · Tool không chính thức, không liên quan Signal Messenger LLC.',
   no_token:'Thiếu token — hãy mở từ Signal Manager.app',
+  m_clean:'🧹 Dọn cache', t_cleaned:'🧹 Đã giải phóng %s',
+  t_clean_running:'Account đang chạy — tắt trước khi dọn cache',
+  wel_title:'Chào mừng đến Signal Manager! 🦆',
+  wel_sub:'Máy bạn đã sẵn sàng chạy nhiều account Signal cùng lúc.',
+  wel_s1:'Account Signal chính của bạn đã có sẵn trong bảng bên dưới.',
+  wel_s2:'Bấm <b>＋ Thêm account</b>, đặt tên, rồi quét mã QR bằng điện thoại giữ số thứ hai.',
+  wel_s3:'Mẹo: mở menu ⋯ trên mỗi thẻ để bật <b>⚡ tự mở khi bật máy</b> và <b>🛡 giữ luôn chạy</b>.',
+  wel_cta:'＋ Thêm account thứ 2', wel_skip:'Để sau',
 },
 en: {
   gm:'Good morning 🌞', gnoon:'Good afternoon 🍜', gaft:'Good afternoon ☕️', geve:'Good evening 🌙',
@@ -407,6 +432,14 @@ en: {
   conn_lost:'⚠️ Lost connection to server — reopen Signal Manager',
   footer:'Data: ~/Library/Application Support/Signal-* · Unofficial tool, not affiliated with Signal Messenger LLC.',
   no_token:'Missing token — open via Signal Manager.app',
+  m_clean:'🧹 Clean cache', t_cleaned:'🧹 Freed %s',
+  t_clean_running:'Account is running — quit it before cleaning',
+  wel_title:'Welcome to Signal Manager! 🦆',
+  wel_sub:'Your Mac is ready to run multiple Signal accounts side-by-side.',
+  wel_s1:'Your main Signal account already appears in the board below.',
+  wel_s2:'Click <b>＋ Add account</b>, name it, then scan the QR code with the phone holding your second number.',
+  wel_s3:'Tip: open the ⋯ menu on each card to enable <b>⚡ start at login</b> and <b>🛡 keep alive</b>.',
+  wel_cta:'＋ Add my 2nd account', wel_skip:'Later',
 },
 };
 function t(k){ return (STR[lang] || {})[k] ?? STR.vi[k] ?? k; }
@@ -501,6 +534,7 @@ function render(){
         <button data-act="rename" data-name="${esc(p.name)}">${t('m_rename')}</button>
         <button data-act="color" data-name="${esc(p.name)}">${t('m_color')}</button>
         <button data-act="reveal" data-name="${esc(p.name)}">${t('m_reveal')}</button>
+        <button data-act="clean" data-name="${esc(p.name)}">${t('m_clean')}</button>
         ${p.is_default ? '' : '<hr><button class="mdanger" data-act="del" data-name="' + esc(p.name) + '">' + t('m_del') + '</button>'}
       </div>
       <div class="cmid">${pill}<span class="meta">💾 ${fmtSize(kb)}</span>${p.autostart ? '<span class="meta">' + t('badge_auto') + '</span>' : ''}${p.keepalive ? '<span class="meta">' + t('badge_keep') + '</span>' : ''}</div>
@@ -553,6 +587,11 @@ async function doAction(act, name){
       const enable = !(p && p.keepalive);
       await api('/api/meta', {name, keepalive: enable});
       toast(tf(enable ? 't_keep_on' : 't_keep_off', dispName(p)), 'ok');
+    } else if (act === 'clean') {
+      if (p && p.running) { toast(t('t_clean_running'), 'err'); return; }
+      const r = await api('/api/clean', {name});
+      toast(tf('t_cleaned', fmtSize(r.freed_kb || 0)), 'ok');
+      refresh(false);
     }
     setTimeout(() => refresh(true), 1200);
   } catch (e) {
@@ -774,6 +813,32 @@ $('#btnLang').addEventListener('click', () => {
   localStorage.setItem('sm_lang', lang);
   applyLang();
 });
+
+// ---------- Onboarding lần đầu ----------
+function applyWelcomeLang(){
+  $('#welTitle').textContent = t('wel_title');
+  $('#welSub').textContent = t('wel_sub');
+  $('#welS1').innerHTML = t('wel_s1');
+  $('#welS2').innerHTML = t('wel_s2');
+  $('#welS3').innerHTML = t('wel_s3');
+  $('#welSkip').textContent = t('wel_skip');
+  $('#welCta').textContent = t('wel_cta');
+}
+function maybeShowWelcome(){
+  if (localStorage.getItem('sm_onboarded')) return;
+  if (profiles.length > 1) { localStorage.setItem('sm_onboarded', '1'); return; }
+  applyWelcomeLang();
+  openModal('#ovWelcome');
+}
+$('#welSkip').addEventListener('click', () => {
+  localStorage.setItem('sm_onboarded', '1'); closeModals();
+});
+$('#welCta').addEventListener('click', () => {
+  localStorage.setItem('sm_onboarded', '1'); closeModals(); openAddModal();
+});
+// hiện sau lượt tải đầu tiên (chờ danh sách account về)
+setTimeout(maybeShowWelcome, 1600);
+
 applyLang();
 if (!token) toast(t('no_token'), 'err');
 </script>

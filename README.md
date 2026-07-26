@@ -2,6 +2,8 @@
 
 **Dùng 2, 3, 5… tài khoản Signal cùng lúc trên một máy Mac — có bảng điều khiển đẹp, bấm là chạy.**
 
+👉 **Trang cài đặt 1-click (tự nhận Mac/Windows):** https://dev-lo-18tuoi.github.io/multi-signal/
+
 <p align="center">
   <img src="assets/dashboard.png" width="90%" alt="Bảng điều khiển Signal Manager"/>
 </p>
