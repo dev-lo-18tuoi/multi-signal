@@ -60,6 +60,9 @@ Ngoài app quản lý, mỗi tài khoản còn có **icon riêng** trong thư m�
 **Cửa sổ Signal tự nhiên biến mất?**
 Signal vừa tự cập nhật phiên bản (2 tuần/lần). Mở lại bằng app quản lý hoặc icon — tin nhắn còn nguyên, không mất gì.
 
+**Không có tiếng "ting" khi tin nhắn tới?**
+Âm thanh cần bật ở **2 tầng**: ① *System Settings → Notifications → Signal* → Allow + tick "Play sound for notification"; ② **trong từng cửa sổ Signal** nhấn `⌘ + ,` → Notifications → bật + tick "Play audio notification" (mỗi tài khoản một cài đặt riêng!). Lưu ý: cửa sổ đang mở trước mặt thì Signal cố tình không kêu, và Focus/Do Not Disturb 🌙 đang bật cũng câm.
+
 **Máy hỏi mật khẩu khi mở Signal?**
 Đó là macOS hỏi quyền đọc khóa bảo mật. Nhập mật khẩu máy rồi bấm **"Always Allow" (Luôn cho phép)** — nhớ chọn Always, chỉ bị hỏi 1 lần đầu cho mỗi tài khoản.
 
