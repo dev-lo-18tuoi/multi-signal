@@ -34,7 +34,7 @@ LOG_FILE = STATE_DIR / "server.log"
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$")
 COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 BASE = Path.home() / "Library" / "Application Support"
-VERSION = "2.6.0"
+VERSION = "2.7.0"
 RAW_SELF = ("https://raw.githubusercontent.com/dev-lo-18tuoi/multi-signal/main/"
             "signal_manager_server.py")
 INSTALL_URL = ("https://raw.githubusercontent.com/dev-lo-18tuoi/multi-signal/main/"

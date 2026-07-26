@@ -220,6 +220,7 @@
     <p id="subtitle">Đang tải…</p>
   </div>
   <button class="btn primary" id="btnUpdate" style="display:none"></button>
+  <button class="btn ghost" id="btnLang" title="Đổi ngôn ngữ / Change language">EN</button>
   <button class="btn" id="btnOpenAll">▶ Mở tất cả</button>
   <button class="btn ghost" id="btnQuitAll">⏹ Tắt tất cả</button>
   <button class="btn primary" id="btnAdd">＋ Thêm account</button>
@@ -236,23 +237,23 @@
 <div class="overlay" id="ovAdd">
   <div class="modal">
     <div id="addStep1">
-      <h2>Thêm account Signal</h2>
-      <p class="sub">Mỗi account cần một số điện thoại riêng đã đăng ký Signal trên điện thoại.</p>
+      <h2 id="addTitle">Thêm account Signal</h2>
+      <p class="sub" id="addSub">Mỗi account cần một số điện thoại riêng đã đăng ký Signal trên điện thoại.</p>
       <input type="text" id="addName" placeholder="Tên gợi nhớ, ví dụ: congviec" maxlength="32" autocomplete="off">
       <div class="hint" id="addHint">Chỉ dùng chữ, số, gạch ngang, gạch dưới.</div>
       <div class="mbtns">
-        <button class="btn ghost" data-close>Hủy</button>
+        <button class="btn ghost" data-close id="addCancel">Hủy</button>
         <button class="btn primary" id="addGo" disabled>Tạo account</button>
       </div>
     </div>
     <div id="addStep2" style="display:none">
-      <h2>✅ Đã tạo — giờ liên kết điện thoại</h2>
+      <h2 id="addDoneTitle">✅ Đã tạo — giờ liên kết điện thoại</h2>
       <div class="steps">
-        <div class="step"><div class="stepn">1</div><div>Một cửa sổ Signal mới vừa mở kèm <b>mã QR</b> — kéo nó ra cạnh bên.</div></div>
-        <div class="step"><div class="stepn">2</div><div>Trên điện thoại giữ số của account này: <b>Signal → Cài đặt → Thiết bị đã liên kết → Liên kết thiết bị mới</b>.</div></div>
-        <div class="step"><div class="stepn">3</div><div>Quét mã QR rồi chờ đồng bộ vài phút. Xong!</div></div>
+        <div class="step"><div class="stepn">1</div><div id="addS1">Một cửa sổ Signal mới vừa mở kèm <b>mã QR</b> — kéo nó ra cạnh bên.</div></div>
+        <div class="step"><div class="stepn">2</div><div id="addS2">Trên điện thoại giữ số của account này: <b>Signal → Cài đặt → Thiết bị đã liên kết → Liên kết thiết bị mới</b>.</div></div>
+        <div class="step"><div class="stepn">3</div><div id="addS3">Quét mã QR rồi chờ đồng bộ vài phút. Xong!</div></div>
       </div>
-      <div class="mbtns"><button class="btn primary" data-close>Đã hiểu</button></div>
+      <div class="mbtns"><button class="btn primary" data-close id="addOk">Đã hiểu</button></div>
     </div>
   </div>
 </div>
@@ -260,23 +261,23 @@
 <!-- Modal: xóa account -->
 <div class="overlay" id="ovDel">
   <div class="modal">
-    <h2>Xóa account <span id="delName"></span>?</h2>
+    <h2><span id="delTitlePre">Xóa account</span> <span id="delName"></span>?</h2>
     <p class="sub" id="delSize"></p>
-    <div class="warnbox">
+    <div class="warnbox" id="delWarn">
       Chỉ xóa dữ liệu <b>trên máy Mac này</b> — tin nhắn trên điện thoại không mất.
       Sau khi xóa, nhớ vào điện thoại gỡ thiết bị: <i>Cài đặt → Thiết bị đã liên kết</i>.
     </div>
     <div id="delRunning" style="display:none">
-      <p class="sub">⚠️ Account này đang chạy — cần tắt trước khi xóa.</p>
+      <p class="sub" id="delRunMsg">⚠️ Account này đang chạy — cần tắt trước khi xóa.</p>
       <div class="mbtns">
-        <button class="btn ghost" data-close>Hủy</button>
+        <button class="btn ghost" data-close id="delCancel1">Hủy</button>
         <button class="btn" id="delQuitFirst">⏹ Tắt account này</button>
       </div>
     </div>
     <div id="delReady">
-      <label class="chk"><input type="checkbox" id="delChk">Tôi hiểu dữ liệu account này trên máy sẽ bị xóa vĩnh viễn.</label>
+      <label class="chk"><input type="checkbox" id="delChk"><span id="delChkTxt">Tôi hiểu dữ liệu account này trên máy sẽ bị xóa vĩnh viễn.</span></label>
       <div class="mbtns">
-        <button class="btn ghost" data-close>Hủy</button>
+        <button class="btn ghost" data-close id="delCancel2">Hủy</button>
         <button class="btn danger" id="delGo" disabled>Xóa vĩnh viễn</button>
       </div>
     </div>
@@ -286,11 +287,11 @@
 <!-- Modal: đổi tên hiển thị -->
 <div class="overlay" id="ovRename">
   <div class="modal">
-    <h2>Tên hiển thị</h2>
-    <p class="sub">Đặt tên gợi nhớ (ví dụ: Công việc, Gia đình) — chỉ đổi cách hiển thị ở đây, không ảnh hưởng Signal.</p>
+    <h2 id="renTitle">Tên hiển thị</h2>
+    <p class="sub" id="renSub">Đặt tên gợi nhớ (ví dụ: Công việc, Gia đình) — chỉ đổi cách hiển thị ở đây, không ảnh hưởng Signal.</p>
     <input type="text" id="renameInput" maxlength="40" autocomplete="off">
     <div class="mbtns">
-      <button class="btn ghost" data-close>Hủy</button>
+      <button class="btn ghost" data-close id="renCancel">Hủy</button>
       <button class="btn primary" id="renameGo">Lưu</button>
     </div>
   </div>
@@ -299,10 +300,10 @@
 <!-- Modal: đổi màu -->
 <div class="overlay" id="ovColor">
   <div class="modal">
-    <h2>Màu đại diện</h2>
-    <p class="sub">Chọn màu để phân biệt account thoáng qua là nhận ra.</p>
+    <h2 id="colTitle">Màu đại diện</h2>
+    <p class="sub" id="colSub">Chọn màu để phân biệt account thoáng qua là nhận ra.</p>
     <div class="swatches" id="swatches"></div>
-    <div class="mbtns"><button class="btn ghost" data-close>Đóng</button></div>
+    <div class="mbtns"><button class="btn ghost" data-close id="colClose">Đóng</button></div>
   </div>
 </div>
 
@@ -317,6 +318,99 @@ let sizeCache = {};
 let busy = {};
 let renderKey = '';
 let modalTarget = null;
+let lastVer = '';
+
+// ---------- Song ngữ VI/EN ----------
+let lang = localStorage.getItem('sm_lang')
+  || ((navigator.language || '').toLowerCase().startsWith('vi') ? 'vi' : 'en');
+const STR = {
+vi: {
+  gm:'Chào buổi sáng 🌞', gnoon:'Chào buổi trưa 🍜', gaft:'Chào buổi chiều ☕️', geve:'Chào buổi tối 🌙',
+  acc:'account', running:'đang chạy', data:'dữ liệu', auto_chip:'tự mở khi bật máy',
+  p_opening:'Đang mở…', p_quitting:'Đang tắt…', p_on:'Đang chạy', p_off:'Đang tắt',
+  b_focus:'🔍 Focus cửa sổ', b_quit:'⏹ Tắt', b_open:'▶ Mở',
+  main_tag:'Bản chính', main_name:'Signal chính', ghost:'Thêm account',
+  m_auto_on:'⚡ Tự mở khi bật máy', m_auto_off:'⚡ Tắt tự mở khi bật máy',
+  m_keep_on:'🛡 Giữ luôn chạy', m_keep_off:'🛡 Tắt giữ luôn chạy',
+  m_rename:'✏️ Đổi tên hiển thị', m_color:'🎨 Đổi màu đại diện',
+  m_reveal:'📁 Mở thư mục dữ liệu', m_del:'🗑 Xóa account…',
+  badge_auto:'⚡ tự mở', badge_keep:'🛡 giữ chạy',
+  t_focus:'Đã focus cửa sổ %s', t_openall:'Đang mở tất cả account…', t_quitall:'Đã gửi lệnh tắt tất cả',
+  t_auto_on:'⚡ Sẽ tự mở %s khi bật máy', t_auto_off:'Đã tắt tự mở %s',
+  t_keep_on:'🛡 %s sẽ tự mở lại nếu bị đóng ngoài ý muốn', t_keep_off:'Đã tắt giữ luôn chạy cho %s',
+  t_deleted:'Đã xóa account %s', t_quitting1:'Đang tắt %s…',
+  h_openall:'▶ Mở tất cả', h_quitall:'⏹ Tắt tất cả', h_add:'＋ Thêm account',
+  add_title:'Thêm account Signal',
+  add_sub:'Mỗi account cần một số điện thoại riêng đã đăng ký Signal trên điện thoại.',
+  add_ph:'Tên gợi nhớ, ví dụ: congviec', add_hint:'Chỉ dùng chữ, số, gạch ngang, gạch dưới.',
+  add_exists:'Tên này đã tồn tại.',
+  add_bad:'Tên không hợp lệ — chỉ chữ/số/-/_, bắt đầu bằng chữ hoặc số.', add_ok_hint:'✓ Tên hợp lệ',
+  cancel:'Hủy', add_go:'Tạo account', add_busy:'Đang tạo…',
+  add_done:'✅ Đã tạo — giờ liên kết điện thoại',
+  add_s1:'Một cửa sổ Signal mới vừa mở kèm <b>mã QR</b> — kéo nó ra cạnh bên.',
+  add_s2:'Trên điện thoại giữ số của account này: <b>Signal → Cài đặt → Thiết bị đã liên kết → Liên kết thiết bị mới</b>.',
+  add_s3:'Quét mã QR rồi chờ đồng bộ vài phút. Xong!', add_okbtn:'Đã hiểu',
+  del_pre:'Xóa account', del_size:'Dữ liệu trên máy: ',
+  del_warn:'Chỉ xóa dữ liệu <b>trên máy Mac này</b> — tin nhắn trên điện thoại không mất. Sau khi xóa, nhớ vào điện thoại gỡ thiết bị: <i>Cài đặt → Thiết bị đã liên kết</i>.',
+  del_run:'⚠️ Account này đang chạy — cần tắt trước khi xóa.', del_quitfirst:'⏹ Tắt account này',
+  del_chk:'Tôi hiểu dữ liệu account này trên máy sẽ bị xóa vĩnh viễn.',
+  del_go:'Xóa vĩnh viễn', del_busy:'Đang xóa…',
+  ren_title:'Tên hiển thị',
+  ren_sub:'Đặt tên gợi nhớ (ví dụ: Công việc, Gia đình) — chỉ đổi cách hiển thị ở đây, không ảnh hưởng Signal.',
+  ren_save:'Lưu',
+  col_title:'Màu đại diện', col_sub:'Chọn màu để phân biệt account thoáng qua là nhận ra.', col_close:'Đóng',
+  upd:'🔄 Bản mới v%s — Cập nhật', upd_busy:'Đang cập nhật…',
+  upd_done:'✅ Xong — đóng rồi mở lại app nhé!', upd_retry:'🔄 Thử cập nhật lại',
+  upd_toast:'Đã cập nhật! Đóng cửa sổ này và mở lại Signal Manager để dùng bản mới.', upd_err:'Cập nhật lỗi: ',
+  conn_lost:'⚠️ Mất kết nối server — mở lại Signal Manager',
+  footer:'Dữ liệu: ~/Library/Application Support/Signal-* · Tool không chính thức, không liên quan Signal Messenger LLC.',
+  no_token:'Thiếu token — hãy mở từ Signal Manager.app',
+},
+en: {
+  gm:'Good morning 🌞', gnoon:'Good afternoon 🍜', gaft:'Good afternoon ☕️', geve:'Good evening 🌙',
+  acc:'accounts', running:'running', data:'on disk', auto_chip:'start at login',
+  p_opening:'Opening…', p_quitting:'Quitting…', p_on:'Running', p_off:'Stopped',
+  b_focus:'🔍 Focus window', b_quit:'⏹ Quit', b_open:'▶ Open',
+  main_tag:'Main profile', main_name:'Main Signal', ghost:'Add account',
+  m_auto_on:'⚡ Start at login', m_auto_off:'⚡ Disable start at login',
+  m_keep_on:'🛡 Keep alive', m_keep_off:'🛡 Disable keep alive',
+  m_rename:'✏️ Rename', m_color:'🎨 Change color',
+  m_reveal:'📁 Reveal data folder', m_del:'🗑 Delete account…',
+  badge_auto:'⚡ login', badge_keep:'🛡 keep alive',
+  t_focus:'Focused window of %s', t_openall:'Opening all accounts…', t_quitall:'Quit signal sent to all',
+  t_auto_on:'⚡ %s will start at login', t_auto_off:'Start at login disabled for %s',
+  t_keep_on:'🛡 %s will auto-reopen if closed unexpectedly', t_keep_off:'Keep alive disabled for %s',
+  t_deleted:'Deleted account %s', t_quitting1:'Quitting %s…',
+  h_openall:'▶ Open all', h_quitall:'⏹ Quit all', h_add:'＋ Add account',
+  add_title:'Add Signal account',
+  add_sub:'Each account needs its own phone number already registered with Signal on a phone.',
+  add_ph:'Memorable name, e.g. work', add_hint:'Letters, digits, dash, underscore only.',
+  add_exists:'This name already exists.',
+  add_bad:'Invalid name — letters/digits/-/_ only, must start with a letter or digit.', add_ok_hint:'✓ Valid name',
+  cancel:'Cancel', add_go:'Create account', add_busy:'Creating…',
+  add_done:'✅ Created — now link your phone',
+  add_s1:'A new Signal window just opened with a <b>QR code</b> — keep it next to this.',
+  add_s2:'On the phone holding this account’s number: <b>Signal → Settings → Linked Devices → Link New Device</b>.',
+  add_s3:'Scan the QR code and wait a few minutes to sync. Done!', add_okbtn:'Got it',
+  del_pre:'Delete account', del_size:'Data on this Mac: ',
+  del_warn:'Only deletes data <b>on this Mac</b> — messages on your phone are untouched. Afterwards, remove the device on your phone: <i>Settings → Linked Devices</i>.',
+  del_run:'⚠️ This account is running — quit it before deleting.', del_quitfirst:'⏹ Quit this account',
+  del_chk:'I understand this account’s data on this Mac will be permanently deleted.',
+  del_go:'Delete permanently', del_busy:'Deleting…',
+  ren_title:'Display name',
+  ren_sub:'A friendly label (e.g. Work, Family) — only changes how it shows here, not in Signal.',
+  ren_save:'Save',
+  col_title:'Accent color', col_sub:'Pick a color to tell accounts apart at a glance.', col_close:'Close',
+  upd:'🔄 New version v%s — Update', upd_busy:'Updating…',
+  upd_done:'✅ Done — close and reopen the app!', upd_retry:'🔄 Retry update',
+  upd_toast:'Updated! Close this window and reopen Signal Manager to use the new version.', upd_err:'Update failed: ',
+  conn_lost:'⚠️ Lost connection to server — reopen Signal Manager',
+  footer:'Data: ~/Library/Application Support/Signal-* · Unofficial tool, not affiliated with Signal Messenger LLC.',
+  no_token:'Missing token — open via Signal Manager.app',
+},
+};
+function t(k){ return (STR[lang] || {})[k] ?? STR.vi[k] ?? k; }
+function tf(k, s){ return t(k).replace('%s', s); }
 
 async function api(path, body) {
   const res = await fetch(path, {
@@ -337,14 +431,14 @@ function fmtSize(kb){
   if (kb >= 1024) return Math.round(kb/1024) + ' MB';
   return kb + ' KB';
 }
-function dispName(p){ return p.nickname || (p.is_default ? 'Signal chính' : p.name); }
+function dispName(p){ return p.nickname || (p.is_default ? t('main_name') : p.name); }
 function colorOf(p, i){ return p.color || PALETTE[i % PALETTE.length]; }
 function greeting(){
   const h = new Date().getHours();
-  if (h < 11) return 'Chào buổi sáng 🌞';
-  if (h < 14) return 'Chào buổi trưa 🍜';
-  if (h < 18) return 'Chào buổi chiều ☕️';
-  return 'Chào buổi tối 🌙';
+  if (h < 11) return t('gm');
+  if (h < 14) return t('gnoon');
+  if (h < 18) return t('gaft');
+  return t('geve');
 }
 function toast(msg, cls){
   const t = document.createElement('div');
@@ -371,25 +465,25 @@ function render(){
   const totalKb = profiles.reduce((s, p) => s + (sizeCache[p.name] || 0), 0);
 
   $('#hello').textContent = greeting();
-  $('#subtitle').textContent = profiles.length + ' account · ' + running + ' đang chạy';
+  $('#subtitle').textContent = profiles.length + ' ' + t('acc') + ' · ' + running + ' ' + t('running');
   $('#chips').innerHTML =
-    (running ? '<span class="chip"><span class="dot"></span><b>' + running + '</b>&nbsp;đang chạy</span>' : '') +
-    '<span class="chip">👥 <b>' + profiles.length + '</b>&nbsp;account</span>' +
-    '<span class="chip">💾 <b>' + fmtSize(totalKb) + '</b>&nbsp;dữ liệu</span>' +
-    (autoCount ? '<span class="chip">⚡ <b>' + autoCount + '</b>&nbsp;tự mở khi bật máy</span>' : '');
+    (running ? '<span class="chip"><span class="dot"></span><b>' + running + '</b>&nbsp;' + t('running') + '</span>' : '') +
+    '<span class="chip">👥 <b>' + profiles.length + '</b>&nbsp;' + t('acc') + '</span>' +
+    '<span class="chip">💾 <b>' + fmtSize(totalKb) + '</b>&nbsp;' + t('data') + '</span>' +
+    (autoCount ? '<span class="chip">⚡ <b>' + autoCount + '</b>&nbsp;' + t('auto_chip') + '</span>' : '');
 
   const grid = $('#grid');
   grid.innerHTML = profiles.map((p, i) => {
     const c = colorOf(p, i);
     const b = busy[p.name];
-    const pill = b === 'opening' ? '<span class="pill on"><span class="spin"></span>Đang mở…</span>'
-      : b === 'quitting' ? '<span class="pill off"><span class="spin"></span>Đang tắt…</span>'
-      : p.running ? '<span class="pill on"><span class="dot"></span>Đang chạy</span>'
-      : '<span class="pill off"><span class="dot"></span>Đang tắt</span>';
+    const pill = b === 'opening' ? '<span class="pill on"><span class="spin"></span>' + t('p_opening') + '</span>'
+      : b === 'quitting' ? '<span class="pill off"><span class="spin"></span>' + t('p_quitting') + '</span>'
+      : p.running ? '<span class="pill on"><span class="dot"></span>' + t('p_on') + '</span>'
+      : '<span class="pill off"><span class="dot"></span>' + t('p_off') + '</span>';
     const mainBtn = p.running
-      ? `<button class="btn" data-act="open" data-name="${esc(p.name)}">🔍 Focus cửa sổ</button>
-         <button class="btn ghost" data-act="quit" data-name="${esc(p.name)}">⏹ Tắt</button>`
-      : `<button class="btn primary" data-act="open" data-name="${esc(p.name)}">▶ Mở</button>`;
+      ? `<button class="btn" data-act="open" data-name="${esc(p.name)}">${t('b_focus')}</button>
+         <button class="btn ghost" data-act="quit" data-name="${esc(p.name)}">${t('b_quit')}</button>`
+      : `<button class="btn primary" data-act="open" data-name="${esc(p.name)}">${t('b_open')}</button>`;
     const kb = sizeCache[p.name];
     return `
     <div class="card" style="animation-delay:${i*70}ms">
@@ -397,24 +491,24 @@ function render(){
         <div class="avatar ${p.running ? 'on' : 'off'}" style="background:${c}">${esc(dispName(p).charAt(0).toUpperCase())}</div>
         <div class="cinfo">
           <div class="cname">${esc(dispName(p))}</div>
-          <div class="ctag">${p.is_default ? 'Bản chính' : 'Signal-' + esc(p.name)}</div>
+          <div class="ctag">${p.is_default ? t('main_tag') : 'Signal-' + esc(p.name)}</div>
         </div>
         <button class="kebab" data-menu="${esc(p.name)}">⋯</button>
       </div>
       <div class="menu" id="menu-${esc(p.name)}">
-        <button data-act="autostart" data-name="${esc(p.name)}">${p.autostart ? '⚡ Tắt tự mở khi bật máy' : '⚡ Tự mở khi bật máy'}</button>
-        <button data-act="keepalive" data-name="${esc(p.name)}">${p.keepalive ? '🛡 Tắt giữ luôn chạy' : '🛡 Giữ luôn chạy'}</button>
-        <button data-act="rename" data-name="${esc(p.name)}">✏️ Đổi tên hiển thị</button>
-        <button data-act="color" data-name="${esc(p.name)}">🎨 Đổi màu đại diện</button>
-        <button data-act="reveal" data-name="${esc(p.name)}">📁 Mở thư mục dữ liệu</button>
-        ${p.is_default ? '' : '<hr><button class="mdanger" data-act="del" data-name="' + esc(p.name) + '">🗑 Xóa account…</button>'}
+        <button data-act="autostart" data-name="${esc(p.name)}">${p.autostart ? t('m_auto_off') : t('m_auto_on')}</button>
+        <button data-act="keepalive" data-name="${esc(p.name)}">${p.keepalive ? t('m_keep_off') : t('m_keep_on')}</button>
+        <button data-act="rename" data-name="${esc(p.name)}">${t('m_rename')}</button>
+        <button data-act="color" data-name="${esc(p.name)}">${t('m_color')}</button>
+        <button data-act="reveal" data-name="${esc(p.name)}">${t('m_reveal')}</button>
+        ${p.is_default ? '' : '<hr><button class="mdanger" data-act="del" data-name="' + esc(p.name) + '">' + t('m_del') + '</button>'}
       </div>
-      <div class="cmid">${pill}<span class="meta">💾 ${fmtSize(kb)}</span>${p.autostart ? '<span class="meta" title="Tự mở khi đăng nhập Mac">⚡ tự mở</span>' : ''}${p.keepalive ? '<span class="meta" title="Tự mở lại nếu bị đóng ngoài ý muốn (vd Signal update)">🛡 giữ chạy</span>' : ''}</div>
+      <div class="cmid">${pill}<span class="meta">💾 ${fmtSize(kb)}</span>${p.autostart ? '<span class="meta">' + t('badge_auto') + '</span>' : ''}${p.keepalive ? '<span class="meta">' + t('badge_keep') + '</span>' : ''}</div>
       <div class="cbtns">${mainBtn}</div>
     </div>`;
   }).join('')
   + `<div class="card ghost" data-ghost style="animation-delay:${profiles.length*70}ms">
-       <div class="plus">＋</div>Thêm account
+       <div class="plus">＋</div>${t('ghost')}
      </div>`;
 }
 
@@ -431,7 +525,7 @@ async function refresh(fast){
     updateFooter(data.version);
     render();
   } catch (e) {
-    $('#subtitle').textContent = '⚠️ Mất kết nối server — mở lại Signal Manager';
+    $('#subtitle').textContent = t('conn_lost');
   }
 }
 setInterval(() => refresh(true), 3000);
@@ -445,7 +539,7 @@ async function doAction(act, name){
     if (act === 'open') {
       if (!(p && p.running)) { busy[name] = 'opening'; render(); }
       await api('/api/open', {name});
-      if (p && p.running) toast('Đã focus cửa sổ ' + dispName(p), 'ok');
+      if (p && p.running) toast(tf('t_focus', dispName(p)), 'ok');
     } else if (act === 'quit') {
       busy[name] = 'quitting'; render();
       await api('/api/quit', {name});
@@ -454,13 +548,11 @@ async function doAction(act, name){
     } else if (act === 'autostart') {
       const enable = !(p && p.autostart);
       await api('/api/autostart', {name, enable});
-      toast(enable ? '⚡ Sẽ tự mở ' + dispName(p) + ' khi bật máy' : 'Đã tắt tự mở ' + dispName(p), 'ok');
+      toast(tf(enable ? 't_auto_on' : 't_auto_off', dispName(p)), 'ok');
     } else if (act === 'keepalive') {
       const enable = !(p && p.keepalive);
       await api('/api/meta', {name, keepalive: enable});
-      toast(enable
-        ? '🛡 ' + dispName(p) + ' sẽ tự mở lại nếu bị đóng ngoài ý muốn'
-        : 'Đã tắt giữ luôn chạy cho ' + dispName(p), 'ok');
+      toast(tf(enable ? 't_keep_on' : 't_keep_off', dispName(p)), 'ok');
     }
     setTimeout(() => refresh(true), 1200);
   } catch (e) {
@@ -495,13 +587,13 @@ document.addEventListener('click', e => {
 // Header
 $('#btnOpenAll').addEventListener('click', async () => {
   profiles.forEach(p => { if (!p.running) busy[p.name] = 'opening'; }); render();
-  try { await api('/api/open-all', {}); toast('Đang mở tất cả account…', 'ok'); }
+  try { await api('/api/open-all', {}); toast(t('t_openall'), 'ok'); }
   catch (e) { busy = {}; toast(e.message, 'err'); }
   setTimeout(() => refresh(true), 1500);
 });
 $('#btnQuitAll').addEventListener('click', async () => {
   profiles.forEach(p => { if (p.running) busy[p.name] = 'quitting'; }); render();
-  try { await api('/api/quit-all', {}); toast('Đã gửi lệnh tắt tất cả', 'ok'); }
+  try { await api('/api/quit-all', {}); toast(t('t_quitall'), 'ok'); }
   catch (e) { busy = {}; toast(e.message, 'err'); }
   setTimeout(() => refresh(true), 1500);
 });
@@ -511,7 +603,7 @@ const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$/;
 function openAddModal(){
   $('#addStep1').style.display = ''; $('#addStep2').style.display = 'none';
   $('#addName').value = ''; $('#addGo').disabled = true;
-  $('#addHint').className = 'hint'; $('#addHint').textContent = 'Chỉ dùng chữ, số, gạch ngang, gạch dưới.';
+  $('#addHint').className = 'hint'; $('#addHint').textContent = t('add_hint');
   openModal('#ovAdd'); $('#addName').focus();
 }
 $('#btnAdd').addEventListener('click', openAddModal);
@@ -521,30 +613,30 @@ $('#addName').addEventListener('input', () => {
   const ok = NAME_RE.test(v) && !exists;
   $('#addGo').disabled = !ok;
   const h = $('#addHint');
-  if (!v) { h.className = 'hint'; h.textContent = 'Chỉ dùng chữ, số, gạch ngang, gạch dưới.'; }
-  else if (exists) { h.className = 'hint bad'; h.textContent = 'Tên này đã tồn tại.'; }
-  else if (!ok) { h.className = 'hint bad'; h.textContent = 'Tên không hợp lệ — chỉ chữ/số/-/_, bắt đầu bằng chữ hoặc số.'; }
-  else { h.className = 'hint'; h.textContent = '✓ Tên hợp lệ'; }
+  if (!v) { h.className = 'hint'; h.textContent = t('add_hint'); }
+  else if (exists) { h.className = 'hint bad'; h.textContent = t('add_exists'); }
+  else if (!ok) { h.className = 'hint bad'; h.textContent = t('add_bad'); }
+  else { h.className = 'hint'; h.textContent = t('add_ok_hint'); }
 });
 $('#addName').addEventListener('keydown', e => { if (e.key === 'Enter' && !$('#addGo').disabled) $('#addGo').click(); });
 $('#addGo').addEventListener('click', async () => {
   const name = $('#addName').value.trim();
   $('#addGo').disabled = true;
-  $('#addGo').innerHTML = '<span class="spin"></span> Đang tạo…';
+  $('#addGo').innerHTML = '<span class="spin"></span> ' + t('add_busy');
   try {
     await api('/api/add', {name});
     $('#addStep1').style.display = 'none'; $('#addStep2').style.display = '';
     busy[name] = 'opening';
     setTimeout(() => refresh(false), 1500);
   } catch (e) { toast(e.message, 'err'); }
-  $('#addGo').innerHTML = 'Tạo account'; $('#addGo').disabled = false;
+  $('#addGo').innerHTML = t('add_go'); $('#addGo').disabled = false;
 });
 
 // Delete
 function openDelModal(p){
   modalTarget = p;
   $('#delName').textContent = dispName(p);
-  $('#delSize').textContent = 'Dữ liệu trên máy: ' + fmtSize(sizeCache[p.name]) + ' · Signal-' + p.name;
+  $('#delSize').textContent = t('del_size') + fmtSize(sizeCache[p.name]) + ' · Signal-' + p.name;
   $('#delChk').checked = false; $('#delGo').disabled = true;
   const running = !!p.running;
   $('#delRunning').style.display = running ? '' : 'none';
@@ -555,7 +647,7 @@ $('#delChk').addEventListener('change', () => { $('#delGo').disabled = !$('#delC
 $('#delQuitFirst').addEventListener('click', async () => {
   try {
     await api('/api/quit', {name: modalTarget.name});
-    toast('Đang tắt ' + dispName(modalTarget) + '…', 'ok');
+    toast(tf('t_quitting1', dispName(modalTarget)), 'ok');
     setTimeout(async () => {
       await refresh(true);
       const p = profiles.find(x => x.name === modalTarget.name);
@@ -565,15 +657,15 @@ $('#delQuitFirst').addEventListener('click', async () => {
 });
 $('#delGo').addEventListener('click', async () => {
   $('#delGo').disabled = true;
-  $('#delGo').innerHTML = '<span class="spin"></span> Đang xóa…';
+  $('#delGo').innerHTML = '<span class="spin"></span> ' + t('del_busy');
   try {
     await api('/api/remove', {name: modalTarget.name});
-    toast('Đã xóa account ' + dispName(modalTarget), 'ok');
+    toast(tf('t_deleted', dispName(modalTarget)), 'ok');
     closeModals();
     delete sizeCache[modalTarget.name];
     refresh(false);
   } catch (e) { toast(e.message, 'err'); }
-  $('#delGo').innerHTML = 'Xóa vĩnh viễn';
+  $('#delGo').innerHTML = t('del_go');
 });
 
 // Rename
@@ -615,33 +707,75 @@ async function checkUpdate(){
     if (cmpVer(d.latest, d.current) > 0) {
       const b = $('#btnUpdate');
       b.style.display = '';
-      b.textContent = '🔄 Bản mới v' + d.latest + ' — Cập nhật';
+      b.textContent = tf('upd', d.latest);
     }
   } catch (e) {}
 }
 $('#btnUpdate').addEventListener('click', async () => {
   const b = $('#btnUpdate');
   b.disabled = true;
-  b.innerHTML = '<span class="spin"></span> Đang cập nhật…';
+  b.innerHTML = '<span class="spin"></span> ' + t('upd_busy');
   try {
     await api('/api/self-update', {});
-    b.textContent = '✅ Xong — đóng rồi mở lại app nhé!';
-    toast('Đã cập nhật! Đóng cửa sổ này và mở lại Signal Manager để dùng bản mới.', 'ok');
+    b.textContent = t('upd_done');
+    toast(t('upd_toast'), 'ok');
   } catch (e) {
     b.disabled = false;
-    b.textContent = '🔄 Thử cập nhật lại';
-    toast('Cập nhật lỗi: ' + e.message, 'err');
+    b.textContent = t('upd_retry');
+    toast(t('upd_err') + e.message, 'err');
   }
 });
 checkUpdate();
 setInterval(checkUpdate, 6 * 3600 * 1000);
 
 function updateFooter(v){
-  $('#footer').textContent = 'Dữ liệu: ~/Library/Application Support/Signal-* · '
-    + 'Tool không chính thức, không liên quan Signal Messenger LLC.' + (v ? ' · v' + v : '');
+  if (v) lastVer = v;
+  $('#footer').textContent = t('footer') + (lastVer ? ' · v' + lastVer : '');
 }
-updateFooter();
-if (!token) toast('Thiếu token — hãy mở từ Signal Manager.app', 'err');
+
+// ---------- Áp ngôn ngữ cho phần tĩnh + nút chuyển ----------
+function applyLang(){
+  document.documentElement.lang = lang;
+  $('#btnLang').textContent = lang === 'vi' ? 'EN' : 'VI';
+  $('#btnOpenAll').textContent = t('h_openall');
+  $('#btnQuitAll').textContent = t('h_quitall');
+  $('#btnAdd').textContent = t('h_add');
+  $('#addTitle').textContent = t('add_title');
+  $('#addSub').textContent = t('add_sub');
+  $('#addName').placeholder = t('add_ph');
+  $('#addCancel').textContent = t('cancel');
+  $('#addGo').textContent = t('add_go');
+  $('#addDoneTitle').textContent = t('add_done');
+  $('#addS1').innerHTML = t('add_s1');
+  $('#addS2').innerHTML = t('add_s2');
+  $('#addS3').innerHTML = t('add_s3');
+  $('#addOk').textContent = t('add_okbtn');
+  $('#delTitlePre').textContent = t('del_pre');
+  $('#delWarn').innerHTML = t('del_warn');
+  $('#delRunMsg').textContent = t('del_run');
+  $('#delCancel1').textContent = t('cancel');
+  $('#delCancel2').textContent = t('cancel');
+  $('#delQuitFirst').textContent = t('del_quitfirst');
+  $('#delChkTxt').textContent = t('del_chk');
+  $('#delGo').textContent = t('del_go');
+  $('#renTitle').textContent = t('ren_title');
+  $('#renSub').textContent = t('ren_sub');
+  $('#renCancel').textContent = t('cancel');
+  $('#renameGo').textContent = t('ren_save');
+  $('#colTitle').textContent = t('col_title');
+  $('#colSub').textContent = t('col_sub');
+  $('#colClose').textContent = t('col_close');
+  renderKey = '';
+  render();
+  updateFooter();
+}
+$('#btnLang').addEventListener('click', () => {
+  lang = lang === 'vi' ? 'en' : 'vi';
+  localStorage.setItem('sm_lang', lang);
+  applyLang();
+});
+applyLang();
+if (!token) toast(t('no_token'), 'err');
 </script>
 </body>
 </html>
