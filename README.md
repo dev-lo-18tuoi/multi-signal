@@ -1,123 +1,141 @@
-# Signal Manager
+# Signal Manager 🦆
 
-**Chạy nhiều account Signal Desktop song song trên một máy Mac — có dashboard quản lý tử tế.**
+**Dùng 2, 3, 5… tài khoản Signal cùng lúc trên một máy Mac — có bảng điều khiển đẹp, bấm là chạy.**
 
-Signal Desktop chính thức chỉ cho 1 account. Tool này tạo cho mỗi account một
-thư mục dữ liệu riêng (`--user-data-dir`, cơ chế Electron hỗ trợ sẵn) để bạn chạy
-2, 3, 5… account cùng lúc, mỗi account một cửa sổ độc lập.
+<p align="center">
+  <img src="assets/dashboard.png" width="90%" alt="Bảng điều khiển Signal Manager"/>
+</p>
 
-> 🇬🇧 English summary at the bottom.
+Bình thường Signal trên máy tính chỉ cho đăng nhập **một** tài khoản. Cài tool này xong, mỗi tài khoản có một cửa sổ Signal riêng, chạy song song, không đụng nhau.
 
-## Tính năng
+---
 
-- 🖥 **Dashboard quản lý**: mỗi account một card — avatar màu riêng, nickname tự đặt,
-  trạng thái chạy/tắt realtime, dung lượng dữ liệu
-- ▶ **Mở / Focus / Tắt** từng account hoặc tất cả bằng 1 click
-- ➕ **Thêm account**: tự tạo profile + hiện QR + hướng dẫn liên kết 3 bước
-- ⚡ **Tự mở khi bật máy** (bật/tắt riêng từng account)
-- 🚀 **Launcher riêng** cho từng account trong `~/Applications` (kéo vào Dock được)
-- 🗑 **Xóa an toàn**: xác nhận 2 lớp, chặn xóa khi đang chạy, không bao giờ đụng account chính
-- 🔒 Server chỉ chạy nội bộ (`127.0.0.1` + token phiên), không gửi gì ra ngoài
+## 🧰 Bạn cần gì trước khi cài? (đọc kỹ 3 dòng này)
 
-## Yêu cầu
+1. Một máy **Mac** đã cài **[Signal Desktop](https://signal.org/download)** (miễn phí)
+2. Mỗi tài khoản Signal = **một số điện thoại riêng**, và số đó **đã đăng ký Signal trên một chiếc điện thoại** — vì bản máy tính hoạt động bằng cách *quét mã QR từ điện thoại*
+3. 5 phút rảnh ☕️
 
-| Thứ | Ghi chú |
-|---|---|
-| macOS + [Signal Desktop](https://signal.org/download) | Cài Signal trước |
-| Command Line Tools | Có `python3` — nếu thiếu chạy `xcode-select --install` |
-| **Mỗi account = 1 số điện thoại riêng** | Đã đăng ký Signal trên điện thoại (bản Desktop luôn là *thiết bị liên kết*, quét QR từ điện thoại). Không có cách nào tạo 2 account từ 1 số — đây là kiến trúc của Signal, không tool nào vượt được. |
+> ❗️Không có cách nào tạo 2 tài khoản từ 1 số điện thoại — đó là quy định của Signal, không tool nào làm khác được.
 
-## Cài đặt (1 lệnh)
+## 📦 Cài đặt (làm theo y hệt, không cần hiểu)
+
+**Bước 1.** Nhấn tổ hợp phím `⌘ + phím cách` (Command + Space) → gõ chữ `Terminal` → nhấn `Enter`. Một cửa sổ chữ trắng nền sáng (hoặc đen) hiện ra — đừng sợ nó 😄
+
+**Bước 2.** Copy nguyên dòng dưới đây (bấm nút 📋 ở góc phải khung), dán vào cửa sổ đó, nhấn `Enter`:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/dev-lo-18tuoi/multi-signal/main/install.sh | bash
 ```
 
-App `Signal Manager.app` xuất hiện trong `~/Applications` và tự mở.
-**Không bị Gatekeeper chặn** vì app được tạo cục bộ ngay trên máy bạn, không phải
-binary tải về. Muốn cập nhật phiên bản mới: chạy lại đúng lệnh trên.
+**Bước 3.** Chờ đến khi thấy dòng **"✅ Cài xong!"** — app **Signal Manager** (icon con vịt vàng 🦆) sẽ tự mở. Xong! Có thể đóng Terminal, cả đời không cần mở lại.
 
-Cài từ source:
+> 💡 Kéo icon con vịt vào **thanh Dock** (thanh icon dưới màn hình) để lần sau bấm 1 phát là mở.
+
+## ➕ Thêm tài khoản thứ 2 (và 3, 4…)
+
+1. Trong app, bấm nút xanh **＋ Thêm account** → đặt tên gợi nhớ (vd: `congviec`) → **Tạo account**
+2. Một cửa sổ Signal mới hiện ra kèm **mã QR**
+3. Cầm chiếc điện thoại đang giữ số của tài khoản đó, mở Signal:
+   **Cài đặt → Thiết bị đã liên kết → Liên kết thiết bị mới** → quét mã QR
+4. Chờ vài phút để tin nhắn đồng bộ về. Xong!
+
+## 🕹 Dùng hằng ngày
+
+| Muốn | Bấm |
+|---|---|
+| Mở hết tài khoản (sáng vào làm) | **▶ Mở tất cả** |
+| Nhảy tới cửa sổ của 1 tài khoản | **🔍 Focus cửa sổ** trên thẻ đó |
+| Tắt 1 tài khoản / tắt hết | **⏹ Tắt** trên thẻ / **⏹ Tắt tất cả** |
+| Tài khoản tự bật mỗi lần mở máy | menu **⋯** trên thẻ → **⚡ Tự mở khi bật máy** |
+| Đặt tên & màu dễ nhớ cho thẻ | menu **⋯** → **✏️ Đổi tên** / **🎨 Đổi màu** |
+| Xóa 1 tài khoản khỏi máy | menu **⋯** → **🗑 Xóa account…** (có hỏi kỹ trước khi xóa) |
+
+Ngoài app quản lý, mỗi tài khoản còn có **icon riêng** trong thư mục `~/Applications` (icon vuông có màu + tên) — bấm thẳng vào đó cũng mở được, không cần qua app quản lý.
+
+## ❓ Câu hỏi thường gặp
+
+**Cửa sổ Signal tự nhiên biến mất?**
+Signal vừa tự cập nhật phiên bản (2 tuần/lần). Mở lại bằng app quản lý hoặc icon — tin nhắn còn nguyên, không mất gì.
+
+**Máy hỏi mật khẩu khi mở Signal?**
+Đó là macOS hỏi quyền đọc khóa bảo mật. Nhập mật khẩu máy rồi bấm **"Always Allow" (Luôn cho phép)** — nhớ chọn Always, chỉ bị hỏi 1 lần đầu cho mỗi tài khoản.
+
+**Muốn lên bản mới của tool?**
+Khi có bản mới, trong app sẽ hiện nút **🔄 Cập nhật** — bấm 1 phát là xong. (Hoặc chạy lại đúng lệnh cài ở trên, kết quả y hệt.)
+
+**Xóa tài khoản trên máy có mất tin nhắn không?**
+Không — chỉ xóa dữ liệu trên máy Mac này. Tin nhắn trên điện thoại còn nguyên. Nhớ vào điện thoại gỡ thiết bị cũ: *Cài đặt → Thiết bị đã liên kết*.
+
+**Tool này có an toàn không?**
+Toàn bộ chạy **trong máy bạn**, không gửi bất cứ thứ gì ra ngoài. Mã nguồn mở 100% tại repo này — ai cũng kiểm tra được từng dòng. App được tạo ngay trên máy bạn nên macOS không cảnh báo "nhà phát triển không xác định".
+
+**Tìm lại app sau khi tắt máy?**
+`⌘ + phím cách` → gõ "Signal Manager" → Enter. Hoặc Launchpad. Hoặc Dock nếu đã ghim.
+
+## 🗑 Gỡ cài đặt
+
+Dán vào Terminal:
 
 ```bash
-git clone https://github.com/dev-lo-18tuoi/multi-signal && cd multi-signal && ./install.sh
+"$HOME/Applications/Signal Manager.app/Contents/Resources/signal-manager.sh" uninstall
 ```
 
-### Hoặc qua Homebrew
+Chỉ gỡ tool — dữ liệu các tài khoản Signal giữ nguyên.
+
+---
+
+<details>
+<summary><b>🔧 Phần cho người kỹ thuật (bấm để mở)</b></summary>
+
+### Cách hoạt động
+
+Mỗi account = 1 thư mục dữ liệu riêng tại `~/Library/Application Support/Signal-<tên>`, chạy qua flag `--user-data-dir` mà Electron/Signal hỗ trợ sẵn. Khóa single-instance nằm trong từng thư mục → các instance chạy song song. App quản lý = cửa sổ native Swift (WKWebView, compile cục bộ lúc cài bằng swiftc) + server Python stdlib bind `127.0.0.1` với token phiên + engine bash. Zero dependency ngoài.
+
+### CLI
+
+```text
+signal-manager.sh list | state [--fast] | add <tên> | open <tên>|all|default
+                  quit <tên>|all|default | autostart <tên> on|off
+                  remove <tên> [--yes] | launcher <tên> | install | uninstall
+```
+
+### Homebrew
 
 ```bash
 brew install dev-lo-18tuoi/signal-manager/signal-manager
 signal-manager install
 ```
 
-(Formula nằm tại tap `dev-lo-18tuoi/homebrew-signal-manager` — xem `packaging/homebrew/`.)
-
-## 🪟 Windows (BETA)
-
-Chạy trong PowerShell:
+### Windows (BETA — chưa test máy thật, cần feedback)
 
 ```powershell
 irm https://raw.githubusercontent.com/dev-lo-18tuoi/multi-signal/main/install-windows.ps1 | iex
 ```
 
-Bản Windows hiện là **CLI beta** (`add / open / quit / list / autostart / remove` + shortcut
-Desktop cho từng account, tự mở khi đăng nhập qua registry Run). Cùng cơ chế
-`--user-data-dir` như bản Mac. Dashboard web sẽ lên Windows ở bản sau.
-Beta = chưa test trên máy Windows thật — gặp lỗi xin mở issue kèm log.
+CLI PowerShell: `add / open / quit / list / autostart / remove` + shortcut Desktop + autostart qua registry Run. Dashboard sẽ lên Windows sau.
 
-## Dùng CLI (tùy chọn)
+### Bảo mật & giới hạn
 
-```text
-./signal-manager.sh list                # bảng trạng thái
-./signal-manager.sh add congviec        # thêm account
-./signal-manager.sh open all            # mở tất cả
-./signal-manager.sh quit congviec       # tắt 1 account
-./signal-manager.sh autostart congviec on
-./signal-manager.sh remove congviec     # xóa (hỏi xác nhận)
-./signal-manager.sh uninstall           # gỡ tool, GIỮ dữ liệu account
-```
+- Profile chứa khóa + tin nhắn giải mã cục bộ — bảo vệ như chính máy của bạn, đừng sync thư mục `Signal-*` lên cloud
+- Không copy profile sang máy khác (khóa gắn Keychain từng máy)
+- Server chỉ bind loopback, mọi API cần token phiên (so sánh constant-time), check Host header
+- Linux: chưa hỗ trợ chính thức (dùng được engine với chỉnh nhỏ — PR welcome)
 
-## Bảo mật & giới hạn cần biết
+### English summary
 
-- Thư mục `~/Library/Application Support/Signal-*` chứa **khóa và tin nhắn đã giải mã
-  cục bộ** — bảo vệ như chính máy của bạn, đừng đồng bộ lên cloud công cộng.
-- **Không copy profile sang máy khác** — khóa mã hóa gắn với Keychain của từng máy Mac.
-- Khi Signal ra bản mới (~2 tuần/lần), auto-updater có thể tự đóng các cửa sổ để
-  cài đặt — mở lại bằng dashboard hoặc launcher là xong, dữ liệu không mất.
-- Trên cùng máy, xóa account chỉ xóa dữ liệu cục bộ; tin nhắn trên điện thoại còn nguyên.
-  Nhớ gỡ thiết bị cũ trong điện thoại: *Cài đặt → Thiết bị đã liên kết*.
+Run multiple Signal Desktop accounts side-by-side on one Mac. Each account gets its own data dir via Electron's `--user-data-dir`; a native Swift window hosts a local dashboard (127.0.0.1 + session token, zero external calls): open/focus/quit, QR-guided add, per-account login autostart, colored icons & nicknames, safe delete, one-click self-update. One-command install builds the app locally — no Gatekeeper warnings. Each account needs its own phone number registered in Signal on a phone (Signal's architecture).
 
-## Gỡ cài đặt
+### Credits & prior art
 
-```bash
-"$HOME/Applications/Signal Manager.app/Contents/Resources/signal-manager.sh" uninstall
-```
-
-Dữ liệu account không bị đụng tới.
-
----
-
-## English summary
-
-Run multiple Signal Desktop accounts side-by-side on one Mac. Each account gets its
-own data directory via Electron's `--user-data-dir`; a local web dashboard
-(127.0.0.1 + session token, zero external calls) manages them: open/focus/quit,
-add with QR-link guidance, per-account login autostart, colored avatars &
-nicknames, safe two-step delete. Install with one command (see above) — the app
-bundle is generated locally so Gatekeeper never complains. Each account requires
-its own phone number registered in Signal on a phone (Desktop is always a linked
-device — that's Signal's architecture, not a tool limitation).
-
-## Credits & prior art
-
-Cơ chế `--user-data-dir` được cộng đồng dùng từ lâu:
-[kmille/signal-account-switcher](https://github.com/kmille/signal-account-switcher),
-[phx/signal-multi-account](https://github.com/phx/signal-multi-account),
+[kmille/signal-account-switcher](https://github.com/kmille/signal-account-switcher) ·
+[phx/signal-multi-account](https://github.com/phx/signal-multi-account) ·
 [blanchardjeremy/signal-multiple-desktop-mac](https://github.com/blanchardjeremy/signal-multiple-desktop-mac).
-Tool này viết mới hoàn toàn (clean-room), tập trung vào UX + an toàn.
+Viết mới hoàn toàn (clean-room), tập trung UX + an toàn.
+
+</details>
 
 ## Giấy phép & miễn trừ
 
-MIT License — xem [LICENSE](LICENSE).
-Dự án không chính thức, không liên kết, không được bảo trợ bởi Signal Messenger LLC
-hay Signal Foundation. "Signal" là nhãn hiệu của Signal Messenger LLC.
+MIT License — xem [LICENSE](LICENSE). Dự án không chính thức, không liên kết với
+Signal Messenger LLC / Signal Foundation. "Signal" là nhãn hiệu của Signal Messenger LLC.

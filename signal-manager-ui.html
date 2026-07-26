@@ -189,6 +189,25 @@
     border-top-color:#fff; animation:spin .7s linear infinite; display:inline-block;
   }
   @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* Tự đổi theo hệ thống: ban đêm dịu mắt, ban ngày sáng sủa */
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0c0f15; --panel:#151a23; --panel2:#1d2430; --border:#2a3341;
+      --text:#e9edf2; --muted:#8b96a5; --ok:#32d74b; --danger:#ff453a;
+      --shadow:0 10px 32px rgba(0,0,0,.4);
+    }
+    header{background:rgba(12,15,21,.72)}
+    .btn:hover{border-color:#3d4a61; background:#242e3d}
+    .card{background:linear-gradient(180deg,#151a23,#12161e)}
+    .card:hover{border-color:#3d4a61; box-shadow:0 14px 40px rgba(0,0,0,.5)}
+    .card.ghost{border-color:#313d50}
+    .menu button:hover{background:#2a3444}
+    .b1{background:#3A76F0; opacity:.16}
+    .b2{background:#BF5AF2; opacity:.13}
+    .avatar.on{box-shadow:0 0 0 3px var(--panel), 0 0 0 6px rgba(50,215,75,.6), 0 0 16px rgba(50,215,75,.45)}
+    .overlay{background:rgba(5,8,12,.62)}
+  }
 </style>
 </head>
 <body>
@@ -200,6 +219,7 @@
     <h1>Signal Manager</h1>
     <p id="subtitle">Đang tải…</p>
   </div>
+  <button class="btn primary" id="btnUpdate" style="display:none"></button>
   <button class="btn" id="btnOpenAll">▶ Mở tất cả</button>
   <button class="btn ghost" id="btnQuitAll">⏹ Tắt tất cả</button>
   <button class="btn primary" id="btnAdd">＋ Thêm account</button>
@@ -575,6 +595,39 @@ $('#swatches').addEventListener('click', async e => {
     closeModals(); refresh(true);
   } catch (e2) { toast(e2.message, 'err'); }
 });
+
+// ---------- Kiểm tra bản mới (1 click cập nhật) ----------
+function cmpVer(a, b){
+  const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number);
+  for (let i = 0; i < 3; i++) if ((x[i]||0) !== (y[i]||0)) return (x[i]||0) - (y[i]||0);
+  return 0;
+}
+async function checkUpdate(){
+  try {
+    const d = await api('/api/latest');
+    if (cmpVer(d.latest, d.current) > 0) {
+      const b = $('#btnUpdate');
+      b.style.display = '';
+      b.textContent = '🔄 Bản mới v' + d.latest + ' — Cập nhật';
+    }
+  } catch (e) {}
+}
+$('#btnUpdate').addEventListener('click', async () => {
+  const b = $('#btnUpdate');
+  b.disabled = true;
+  b.innerHTML = '<span class="spin"></span> Đang cập nhật…';
+  try {
+    await api('/api/self-update', {});
+    b.textContent = '✅ Xong — đóng rồi mở lại app nhé!';
+    toast('Đã cập nhật! Đóng cửa sổ này và mở lại Signal Manager để dùng bản mới.', 'ok');
+  } catch (e) {
+    b.disabled = false;
+    b.textContent = '🔄 Thử cập nhật lại';
+    toast('Cập nhật lỗi: ' + e.message, 'err');
+  }
+});
+checkUpdate();
+setInterval(checkUpdate, 6 * 3600 * 1000);
 
 function updateFooter(v){
   $('#footer').textContent = 'Dữ liệu: ~/Library/Application Support/Signal-* · '

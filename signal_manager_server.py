@@ -33,9 +33,14 @@ LOG_FILE = STATE_DIR / "server.log"
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$")
 COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 BASE = Path.home() / "Library" / "Application Support"
-VERSION = "2.3.0"
+VERSION = "2.4.0"
+RAW_SELF = ("https://raw.githubusercontent.com/dev-lo-18tuoi/multi-signal/main/"
+            "signal_manager_server.py")
+INSTALL_URL = ("https://raw.githubusercontent.com/dev-lo-18tuoi/multi-signal/main/"
+               "install.sh")
 
 TOKEN = ""  # set in serve()
+_latest_cache = {"at": 0.0, "ver": None}  # cache 6h cho check bản mới
 
 
 # ---------- engine + meta helpers ----------
@@ -133,6 +138,20 @@ class Handler(BaseHTTPRequestHandler):
             return self._deny(401, "token sai hoặc thiếu")
         if path == "/api/ping":
             return self._json({"ok": True, "version": VERSION})
+        if path == "/api/latest":
+            # phiên bản mới nhất trên GitHub (cache 6h, lỗi mạng → coi như bằng hiện tại)
+            now = time.time()
+            if now - _latest_cache["at"] > 6 * 3600 or not _latest_cache["ver"]:
+                latest = VERSION
+                try:
+                    with urllib.request.urlopen(RAW_SELF, timeout=4) as r:
+                        m = re.search(rb'VERSION = "([0-9.]+)"', r.read())
+                        if m:
+                            latest = m.group(1).decode()
+                except Exception:
+                    pass
+                _latest_cache.update(at=now, ver=latest)
+            return self._json({"current": VERSION, "latest": _latest_cache["ver"]})
         if path == "/api/state":
             fast = "fast" in parse_qs(urlparse(self.path).query)
             args = ["state", "--fast"] if fast else ["state"]
@@ -193,6 +212,14 @@ class Handler(BaseHTTPRequestHandler):
                     return self._deny(400, "tên account không hợp lệ")
                 subprocess.run(["open", str(d)], check=False)
                 rc, out, err = 0, "", ""
+            elif path == "/api/self-update":
+                # tải installer chính thức và chạy — app bundle được thay bằng bản mới;
+                # server hiện tại sẽ tự bị thay ở lần mở app kế tiếp (so version)
+                p = subprocess.run(
+                    ["/bin/bash", "-c", "curl -fsSL '%s' | bash" % INSTALL_URL],
+                    capture_output=True, text=True, timeout=300,
+                )
+                rc, out, err = p.returncode, p.stdout.strip(), p.stderr.strip()
             elif path == "/api/meta":
                 if name != "__default__" and not NAME_RE.match(name):
                     return self._deny(400, "tên account không hợp lệ")
