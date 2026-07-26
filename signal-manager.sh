@@ -114,8 +114,17 @@ cmd_list() {
 }
 
 # JSON cho GUI. Tên profile đã qua NAME_RE nên an toàn để nhúng thẳng.
+# Tối ưu: 1 lần `ps` duy nhất cho toàn bộ account (dashboard poll 3s/lần —
+# tiết kiệm CPU/pin so với gọi ps riêng từng profile).
 cmd_state() {
-  local fast=${1:-} name dir running size auto first=1
+  local fast=${1:-} name dir running size auto first=1 pslist line default_run=false
+  pslist=$(ps ax -o command= | sed 's/$/ /')   # đệm space cuối dòng để khớp trọn chuỗi
+  while IFS= read -r line; do
+    case $line in
+      "$SIGNAL_BIN "*)
+        case $line in *--user-data-dir=*) ;; *) default_run=true ;; esac ;;
+    esac
+  done <<< "$pslist"
   json_entry() { # $1=name $2=dir $3=running $4=size_kb $5=is_default $6=autostart
     [[ $first == 1 ]] && first=0 || printf ','
     printf '{"name":"%s","dir":"%s","running":%s,"size_kb":%s,"is_default":%s,"autostart":%s}' \
@@ -123,14 +132,14 @@ cmd_state() {
   }
   printf '['
   if [[ -d "$BASE/Signal" ]]; then
-    if default_running; then running=true; else running=false; fi
+    running=$default_run
     if [[ $fast == "--fast" ]]; then size=null; else size=$(du -sk "$BASE/Signal" 2>/dev/null | cut -f1); size=${size:-null}; fi
     if [[ -f $(agent_plist default) ]]; then auto=true; else auto=false; fi
     json_entry "__default__" "$BASE/Signal" "$running" "$size" true "$auto"
   fi
   while IFS= read -r name; do
     dir=$(profile_dir "$name")
-    if is_running "$dir"; then running=true; else running=false; fi
+    if [[ $pslist == *"--user-data-dir=$dir "* ]]; then running=true; else running=false; fi
     if [[ $fast == "--fast" ]]; then size=null; else size=$(du -sk "$dir" 2>/dev/null | cut -f1); size=${size:-null}; fi
     if [[ -f $(agent_plist "$name") ]]; then auto=true; else auto=false; fi
     json_entry "$name" "$dir" "$running" "$size" false "$auto"

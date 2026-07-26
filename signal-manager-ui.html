@@ -403,12 +403,13 @@ function render(){
       </div>
       <div class="menu" id="menu-${esc(p.name)}">
         <button data-act="autostart" data-name="${esc(p.name)}">${p.autostart ? '⚡ Tắt tự mở khi bật máy' : '⚡ Tự mở khi bật máy'}</button>
+        <button data-act="keepalive" data-name="${esc(p.name)}">${p.keepalive ? '🛡 Tắt giữ luôn chạy' : '🛡 Giữ luôn chạy'}</button>
         <button data-act="rename" data-name="${esc(p.name)}">✏️ Đổi tên hiển thị</button>
         <button data-act="color" data-name="${esc(p.name)}">🎨 Đổi màu đại diện</button>
         <button data-act="reveal" data-name="${esc(p.name)}">📁 Mở thư mục dữ liệu</button>
         ${p.is_default ? '' : '<hr><button class="mdanger" data-act="del" data-name="' + esc(p.name) + '">🗑 Xóa account…</button>'}
       </div>
-      <div class="cmid">${pill}<span class="meta">💾 ${fmtSize(kb)}</span>${p.autostart ? '<span class="meta" title="Tự mở khi đăng nhập Mac">⚡ tự mở</span>' : ''}</div>
+      <div class="cmid">${pill}<span class="meta">💾 ${fmtSize(kb)}</span>${p.autostart ? '<span class="meta" title="Tự mở khi đăng nhập Mac">⚡ tự mở</span>' : ''}${p.keepalive ? '<span class="meta" title="Tự mở lại nếu bị đóng ngoài ý muốn (vd Signal update)">🛡 giữ chạy</span>' : ''}</div>
       <div class="cbtns">${mainBtn}</div>
     </div>`;
   }).join('')
@@ -454,6 +455,12 @@ async function doAction(act, name){
       const enable = !(p && p.autostart);
       await api('/api/autostart', {name, enable});
       toast(enable ? '⚡ Sẽ tự mở ' + dispName(p) + ' khi bật máy' : 'Đã tắt tự mở ' + dispName(p), 'ok');
+    } else if (act === 'keepalive') {
+      const enable = !(p && p.keepalive);
+      await api('/api/meta', {name, keepalive: enable});
+      toast(enable
+        ? '🛡 ' + dispName(p) + ' sẽ tự mở lại nếu bị đóng ngoài ý muốn'
+        : 'Đã tắt giữ luôn chạy cho ' + dispName(p), 'ok');
     }
     setTimeout(() => refresh(true), 1200);
   } catch (e) {

@@ -17,6 +17,7 @@ import re
 import secrets
 import subprocess
 import sys
+import threading
 import time
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -33,7 +34,7 @@ LOG_FILE = STATE_DIR / "server.log"
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$")
 COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 BASE = Path.home() / "Library" / "Application Support"
-VERSION = "2.5.0"
+VERSION = "2.6.0"
 RAW_SELF = ("https://raw.githubusercontent.com/dev-lo-18tuoi/multi-signal/main/"
             "signal_manager_server.py")
 INSTALL_URL = ("https://raw.githubusercontent.com/dev-lo-18tuoi/multi-signal/main/"
@@ -41,6 +42,9 @@ INSTALL_URL = ("https://raw.githubusercontent.com/dev-lo-18tuoi/multi-signal/mai
 
 TOKEN = ""  # set in serve()
 _latest_cache = {"at": 0.0, "ver": None}  # cache 6h cho check bản mới
+# Ý muốn của user: account nào user CHỦ ĐỘNG tắt qua tool thì watchdog 🛡
+# không tự mở lại (đến khi user mở lại). "__ALL__" = vừa bấm Tắt tất cả.
+_quit_intent = {}
 
 
 # ---------- engine + meta helpers ----------
@@ -164,6 +168,7 @@ class Handler(BaseHTTPRequestHandler):
                 m = meta.get(p["name"], {})
                 p["nickname"] = m.get("nickname") or ""
                 p["color"] = m.get("color") or ""
+                p["keepalive"] = bool(m.get("keepalive"))
             return self._json({"profiles": profiles, "version": VERSION})
         return self._deny(404, "not found")
 
@@ -180,8 +185,10 @@ class Handler(BaseHTTPRequestHandler):
 
         try:
             if path == "/api/open-all":
+                _quit_intent.clear()
                 rc, out, err = engine("open", "all", timeout=120)
             elif path == "/api/quit-all":
+                _quit_intent["__ALL__"] = True
                 rc, out, err = engine("quit", "all")
             elif path in ("/api/open", "/api/quit", "/api/add", "/api/remove"):
                 if name != "__default__" and not NAME_RE.match(name):
@@ -199,6 +206,12 @@ class Handler(BaseHTTPRequestHandler):
                 elif action == "add":
                     rc, out, err = engine("add", target)
                 else:
+                    # ghi nhận ý muốn để watchdog 🛡 hành xử đúng
+                    if action == "quit":
+                        _quit_intent[name] = True
+                    elif action == "open":
+                        _quit_intent.pop(name, None)
+                        _quit_intent.pop("__ALL__", None)
                     rc, out, err = engine(action, target)
             elif path == "/api/autostart":
                 if name != "__default__" and not NAME_RE.match(name):
@@ -233,6 +246,10 @@ class Handler(BaseHTTPRequestHandler):
                     if color and not COLOR_RE.match(color):
                         return self._deny(400, "màu không hợp lệ")
                     entry["color"] = color
+                if "keepalive" in body:
+                    entry["keepalive"] = bool(body["keepalive"])
+                    if entry["keepalive"]:
+                        _quit_intent.pop(name, None)
                 meta[name] = entry
                 save_meta(meta)
                 rc, out, err = 0, "", ""
@@ -269,10 +286,41 @@ def ping(info, timeout=1.0):
         return None
 
 
+# Watchdog 🛡 "Giữ luôn chạy": account bật keepalive mà bị đóng NGOÀI ý muốn
+# (vd Signal auto-update tự giết cửa sổ) → tự mở lại + thông báo macOS.
+def watchdog():
+    while True:
+        time.sleep(45)
+        try:
+            rc, out, _ = engine("state", "--fast", timeout=20)
+            if rc != 0:
+                continue
+            meta = load_meta()
+            for p in json.loads(out):
+                nm = p.get("name", "")
+                m = meta.get(nm, {})
+                if not m.get("keepalive"):
+                    continue
+                if p.get("running") or _quit_intent.get(nm) or _quit_intent.get("__ALL__"):
+                    continue
+                target = "default" if nm == "__default__" else nm
+                engine("open", target, timeout=30)
+                nick = m.get("nickname") or ("Signal chính" if nm == "__default__" else nm)
+                nick = nick.replace('"', "").replace("\\", "")
+                subprocess.run(
+                    ["osascript", "-e",
+                     'display notification "Đã tự mở lại %s (bị đóng ngoài ý muốn)" '
+                     'with title "Signal Manager 🛡"' % nick],
+                    check=False, timeout=10)
+        except Exception:
+            pass
+
+
 def serve():
     global TOKEN
     TOKEN = secrets.token_hex(16)
     STATE_DIR.mkdir(mode=0o700, exist_ok=True)
+    threading.Thread(target=watchdog, daemon=True).start()
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     port = httpd.server_address[1]
     RUNTIME_FILE.write_text(json.dumps(
