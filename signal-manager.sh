@@ -387,7 +387,7 @@ cmd_install() {
   # dính Gatekeeper. Thiếu swiftc/compile lỗi → fallback mở dashboard qua browser.
   if command -v swiftc >/dev/null 2>&1 && [[ -f "$app/Contents/Resources/SignalManagerApp.swift" ]]; then
     printf 'Đang biên dịch cửa sổ native (lần đầu có thể mất ~20s)...\n'
-    if swiftc -O "$app/Contents/Resources/SignalManagerApp.swift" \
+    if swiftc -O -swift-version 5 "$app/Contents/Resources/SignalManagerApp.swift" \
         -o "$app/Contents/MacOS/launcher" \
         -framework Cocoa -framework WebKit 2>/tmp/signal-manager-swiftc.log; then
       native=1
