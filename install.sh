@@ -35,14 +35,18 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || true)"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
+mkdir -p "$TMP/assets"
 if [[ -n "$HERE" && -f "$HERE/signal-manager.sh" && -f "$HERE/signal_manager_server.py" ]]; then
   say "→ Dùng source local: $HERE"
   for f in "${FILES[@]}"; do cp "$HERE/$f" "$TMP/$f"; done
+  [[ -f "$HERE/assets/signal-manager.icns" ]] && cp "$HERE/assets/signal-manager.icns" "$TMP/assets/"
 else
   say "→ Tải từ: $REPO"
   for f in "${FILES[@]}"; do
     curl -fsSL "$REPO/$f" -o "$TMP/$f" || { say "❌ Tải $f thất bại."; exit 1; }
   done
+  # icon riêng (không bắt buộc — thiếu thì dùng icon dự phòng)
+  curl -fsSL "$REPO/assets/signal-manager.icns" -o "$TMP/assets/signal-manager.icns" 2>/dev/null || true
 fi
 
 chmod +x "$TMP/signal-manager.sh"

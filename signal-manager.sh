@@ -349,8 +349,18 @@ exec /usr/bin/env python3 "$(dirname "$0")/../Resources/signal_manager_server.py
 EOF
     chmod +x "$app/Contents/MacOS/launcher"
   fi
-  icns=$(find "$SIGNAL_APP/Contents/Resources" -maxdepth 1 -name '*.icns' -print -quit 2>/dev/null)
-  [[ -n $icns ]] && cp "$icns" "$app/Contents/Resources/icon.icns"
+  # icon riêng của Signal Manager (vịt) — tránh nhầm với Signal thật;
+  # tìm ở assets/ (chạy từ repo) hoặc ngay cạnh script (chạy từ bundle đã cài)
+  if [[ -f "$here/assets/signal-manager.icns" ]]; then
+    cp "$here/assets/signal-manager.icns" "$app/Contents/Resources/icon.icns"
+    cp "$here/assets/signal-manager.icns" "$app/Contents/Resources/signal-manager.icns"
+  elif [[ -f "$here/signal-manager.icns" ]]; then
+    cp "$here/signal-manager.icns" "$app/Contents/Resources/icon.icns"
+    cp "$here/signal-manager.icns" "$app/Contents/Resources/signal-manager.icns"
+  else
+    icns=$(find "$SIGNAL_APP/Contents/Resources" -maxdepth 1 -name '*.icns' -print -quit 2>/dev/null)
+    [[ -n $icns ]] && cp "$icns" "$app/Contents/Resources/icon.icns"
+  fi
   cat > "$app/Contents/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
