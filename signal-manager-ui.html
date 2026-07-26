@@ -6,113 +6,153 @@
 <title>Signal Manager</title>
 <style>
   :root{
-    --bg:#0e1116; --panel:#161b22; --panel2:#1c232d; --border:#2a3341;
-    --text:#e9edf2; --muted:#8b96a5; --accent:#3a76f0; --accent2:#2f62c9;
-    --ok:#32d74b; --danger:#ff453a; --warn:#ffd60a;
-    --radius:14px; --shadow:0 8px 28px rgba(0,0,0,.35);
+    --bg:#f4f6fb; --panel:#ffffff; --panel2:#eef2f9; --border:#e2e8f2;
+    --text:#17203a; --muted:#64748b; --accent:#3A76F0; --accent2:#2f62c9;
+    --violet:#BF5AF2; --ok:#16a34a; --danger:#e5484d;
+    --radius:16px; --shadow:0 8px 26px rgba(23,32,58,.09);
   }
   *{box-sizing:border-box; margin:0; padding:0}
   html,body{height:100%}
   body{
-    background:radial-gradient(1200px 500px at 20% -10%, #16203a 0%, var(--bg) 55%);
-    color:var(--text);
+    background:var(--bg); color:var(--text); overflow-x:hidden;
     font:15px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
     -webkit-font-smoothing:antialiased;
   }
+  /* nền sống động: 2 blob gradient trôi chậm */
+  .blob{position:fixed; border-radius:50%; filter:blur(100px); z-index:0; pointer-events:none}
+  .b1{width:520px;height:520px; background:#9db9ff; opacity:.35; top:-140px; left:-120px;
+      animation:drift1 20s ease-in-out infinite alternate}
+  .b2{width:460px;height:460px; background:#e3c4ff; opacity:.3; bottom:-160px; right:-130px;
+      animation:drift2 26s ease-in-out infinite alternate}
+  @keyframes drift1{to{transform:translate(70px,50px) scale(1.12)}}
+  @keyframes drift2{to{transform:translate(-60px,-40px) scale(1.08)}}
+
   /* ===== Header ===== */
   header{
     position:sticky; top:0; z-index:50;
     display:flex; align-items:center; gap:14px;
-    padding:16px 26px; backdrop-filter:blur(14px);
-    background:rgba(14,17,22,.72); border-bottom:1px solid var(--border);
+    padding:15px 28px; backdrop-filter:blur(16px);
+    background:rgba(255,255,255,.72); border-bottom:1px solid var(--border);
   }
   .logo{
-    width:38px;height:38px;border-radius:11px;flex:none;
-    background:linear-gradient(135deg,#3a76f0,#7aa8ff);
-    display:grid;place-items:center;font-weight:800;font-size:19px;color:#fff;
-    box-shadow:0 4px 14px rgba(58,118,240,.4);
+    width:40px;height:40px;border-radius:12px;flex:none; font-size:22px;
+    background:linear-gradient(135deg,#3A76F0,#BF5AF2);
+    display:grid;place-items:center;
+    box-shadow:0 4px 16px rgba(58,118,240,.45);
   }
   .htitle{margin-right:auto}
-  .htitle h1{font-size:17px;font-weight:700;letter-spacing:.2px}
+  .htitle h1{font-size:16.5px;font-weight:700;letter-spacing:.2px}
   .htitle p{font-size:12.5px;color:var(--muted)}
   .btn{
     border:1px solid var(--border); background:var(--panel2); color:var(--text);
-    padding:8px 14px; border-radius:10px; font-size:13.5px; font-weight:600;
-    cursor:pointer; transition:.15s; display:inline-flex; align-items:center; gap:7px;
+    padding:9px 15px; border-radius:11px; font-size:13.5px; font-weight:600;
+    cursor:pointer; transition:.16s; display:inline-flex; align-items:center; gap:7px;
   }
-  .btn:hover{border-color:#3b465a; background:#232c39; transform:translateY(-1px)}
-  .btn:active{transform:translateY(0)}
-  .btn.primary{background:var(--accent); border-color:var(--accent)}
-  .btn.primary:hover{background:var(--accent2)}
+  .btn:hover{border-color:#c6d3e8; background:#e7edf7; transform:translateY(-1px)}
+  .btn:active{transform:scale(.97)}
+  .btn.primary{background:linear-gradient(135deg,#3A76F0,#5b5bf0); border-color:transparent;
+    box-shadow:0 4px 14px rgba(58,118,240,.35)}
+  .btn.primary:hover{filter:brightness(1.12)}
   .btn.ghost{background:transparent}
   .btn.danger{background:var(--danger); border-color:var(--danger); color:#fff}
   .btn:disabled{opacity:.45; cursor:not-allowed; transform:none}
-  /* ===== Grid ===== */
-  main{max-width:1060px; margin:0 auto; padding:28px 26px 80px}
-  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(310px,1fr)); gap:18px}
+
+  /* ===== Nội dung ===== */
+  main{max-width:1080px; margin:0 auto; padding:26px 28px 60px; position:relative; z-index:1}
+  .hello{font-size:21px; font-weight:800; margin-bottom:4px}
+  .chips{display:flex; gap:10px; flex-wrap:wrap; margin:12px 0 22px}
+  .chip{
+    display:inline-flex; align-items:center; gap:7px;
+    background:var(--panel); border:1px solid var(--border); border-radius:999px;
+    padding:6px 14px; font-size:12.5px; font-weight:600; color:var(--muted);
+  }
+  .chip b{color:var(--text)}
+  .chip .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);
+    box-shadow:0 0 8px var(--ok); animation:pulse 2s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.4}}
+
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:18px}
   .card{
-    background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
-    padding:18px; box-shadow:var(--shadow); transition:.18s; position:relative;
+    background:linear-gradient(180deg, #ffffff, #fbfcff);
+    border:1px solid var(--border); border-radius:var(--radius);
+    padding:19px; box-shadow:var(--shadow); transition:.2s; position:relative;
+    animation:rise .4s ease backwards;
   }
-  .card:hover{transform:translateY(-2px); border-color:#39445a}
-  .card-top{display:flex; align-items:center; gap:13px}
+  @keyframes rise{from{opacity:0; transform:translateY(14px)}}
+  .card:hover{transform:translateY(-3px); border-color:#c6d3e8;
+    box-shadow:0 16px 40px rgba(23,32,58,.14)}
+  .card.ghost{
+    display:grid; place-items:center; min-height:172px; cursor:pointer;
+    background:transparent; border:2px dashed #c4cfe0; box-shadow:none;
+    color:var(--muted); font-weight:700; font-size:15px; gap:6px;
+  }
+  .card.ghost:hover{border-color:var(--accent); color:var(--text); background:rgba(58,118,240,.05)}
+  .card.ghost .plus{
+    width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
+    background:var(--panel2); font-size:22px; color:var(--accent);
+  }
+  .card-top{display:flex; align-items:center; gap:14px}
   .avatar{
-    width:46px;height:46px;border-radius:50%;flex:none;
-    display:grid;place-items:center;font-weight:800;font-size:19px;color:#fff;
+    width:52px;height:52px;border-radius:50%;flex:none;
+    display:grid;place-items:center;font-weight:800;font-size:21px;color:#fff;
+    transition:.2s;
   }
+  .avatar.on{box-shadow:0 0 0 3px var(--panel), 0 0 0 6px rgba(22,163,74,.55), 0 0 16px rgba(22,163,74,.35)}
+  .avatar.off{filter:saturate(.55) brightness(.8)}
   .cinfo{min-width:0; margin-right:auto}
   .cname{font-weight:700; font-size:15.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .ctag{font-family:ui-monospace,SF Mono,Menlo,monospace; font-size:11.5px; color:var(--muted)}
   .kebab{
     border:none;background:transparent;color:var(--muted);font-size:19px;
-    width:32px;height:32px;border-radius:8px;cursor:pointer;flex:none;
+    width:34px;height:34px;border-radius:9px;cursor:pointer;flex:none;
   }
   .kebab:hover{background:var(--panel2); color:var(--text)}
   .menu{
-    position:absolute; right:14px; top:56px; z-index:20; min-width:210px;
-    background:var(--panel2); border:1px solid var(--border); border-radius:12px;
+    position:absolute; right:14px; top:60px; z-index:20; min-width:216px;
+    background:var(--panel); border:1px solid var(--border); border-radius:13px;
     box-shadow:var(--shadow); overflow:hidden; display:none;
   }
-  .menu.open{display:block}
+  .menu.open{display:block; animation:rise .18s ease}
   .menu button{
-    display:block; width:100%; text-align:left; padding:10px 15px; border:none;
+    display:block; width:100%; text-align:left; padding:11px 16px; border:none;
     background:transparent; color:var(--text); font-size:13.5px; cursor:pointer;
   }
-  .menu button:hover{background:#28313f}
+  .menu button:hover{background:#eef2f9}
   .menu button.mdanger{color:var(--danger)}
   .menu hr{border:none;border-top:1px solid var(--border)}
-  .cmid{display:flex; align-items:center; gap:10px; margin:14px 0 15px}
+  .cmid{display:flex; align-items:center; gap:10px; margin:15px 0 16px; flex-wrap:wrap}
   .pill{
     display:inline-flex; align-items:center; gap:6px;
-    font-size:12.5px; font-weight:600; padding:4px 11px; border-radius:999px;
+    font-size:12.5px; font-weight:700; padding:5px 12px; border-radius:999px;
   }
   .pill .dot{width:7px;height:7px;border-radius:50%}
-  .pill.on{background:rgba(50,215,75,.12); color:var(--ok)}
-  .pill.on .dot{background:var(--ok); box-shadow:0 0 8px var(--ok)}
-  .pill.off{background:rgba(139,150,165,.12); color:var(--muted)}
+  .pill.on{background:rgba(50,215,75,.13); color:var(--ok)}
+  .pill.on .dot{background:var(--ok); box-shadow:0 0 8px var(--ok); animation:pulse 2s infinite}
+  .pill.off{background:rgba(139,150,165,.13); color:var(--muted)}
   .pill.off .dot{background:var(--muted)}
-  .size{font-size:12.5px; color:var(--muted)}
+  .meta{font-size:12.5px; color:var(--muted)}
   .cbtns{display:flex; gap:9px}
   .cbtns .btn{flex:1; justify-content:center}
-  /* ===== Modal ===== */
+
+  /* ===== Modal / Toast (giữ phong cách đồng bộ) ===== */
   .overlay{
     position:fixed; inset:0; z-index:100; display:none;
-    background:rgba(5,8,12,.6); backdrop-filter:blur(6px);
+    background:rgba(23,32,58,.35); backdrop-filter:blur(7px);
     align-items:center; justify-content:center; padding:20px;
   }
   .overlay.open{display:flex}
   .modal{
-    width:100%; max-width:430px; background:var(--panel); border:1px solid var(--border);
-    border-radius:18px; box-shadow:var(--shadow); padding:24px; animation:pop .18s ease;
+    width:100%; max-width:440px; background:var(--panel); border:1px solid var(--border);
+    border-radius:20px; box-shadow:var(--shadow); padding:26px; animation:pop .2s ease;
   }
-  @keyframes pop{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
+  @keyframes pop{from{transform:scale(.95);opacity:0}}
   .modal h2{font-size:17px; margin-bottom:6px}
   .modal .sub{font-size:13.5px; color:var(--muted); margin-bottom:16px}
   .modal input[type=text]{
-    width:100%; padding:11px 13px; border-radius:10px; border:1px solid var(--border);
-    background:var(--bg); color:var(--text); font-size:14.5px; outline:none;
+    width:100%; padding:12px 14px; border-radius:11px; border:1px solid var(--border);
+    background:var(--bg); color:var(--text); font-size:14.5px; outline:none; transition:.15s;
   }
-  .modal input[type=text]:focus{border-color:var(--accent)}
+  .modal input[type=text]:focus{border-color:var(--accent); box-shadow:0 0 0 3px rgba(58,118,240,.2)}
   .hint{font-size:12.5px; margin-top:7px; color:var(--muted); min-height:18px}
   .hint.bad{color:var(--danger)}
   .mbtns{display:flex; gap:10px; margin-top:18px; justify-content:flex-end}
@@ -124,26 +164,25 @@
   }
   .warnbox{
     background:rgba(255,69,58,.08); border:1px solid rgba(255,69,58,.35);
-    border-radius:11px; padding:12px 14px; font-size:13px; margin:13px 0;
+    border-radius:12px; padding:12px 14px; font-size:13px; margin:13px 0;
   }
   label.chk{display:flex; gap:9px; align-items:flex-start; font-size:13.5px; cursor:pointer; margin-top:4px}
   label.chk input{margin-top:3px; accent-color:var(--danger)}
   .swatches{display:flex; gap:11px; flex-wrap:wrap; margin:16px 0 4px}
-  .sw{width:36px;height:36px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:.12s}
-  .sw:hover{transform:scale(1.12)}
+  .sw{width:38px;height:38px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:.14s}
+  .sw:hover{transform:scale(1.14)}
   .sw.sel{border-color:#fff}
-  /* ===== Toast ===== */
-  #toasts{position:fixed; bottom:22px; left:50%; transform:translateX(-50%); z-index:200; display:grid; gap:9px}
+  #toasts{position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:200; display:grid; gap:9px}
   .toast{
     background:var(--panel2); border:1px solid var(--border); color:var(--text);
-    padding:11px 18px; border-radius:11px; font-size:13.5px; box-shadow:var(--shadow);
-    animation:pop .18s ease; max-width:80vw;
+    padding:12px 19px; border-radius:12px; font-size:13.5px; box-shadow:var(--shadow);
+    animation:pop .2s ease; max-width:80vw;
   }
   .toast.err{border-color:rgba(255,69,58,.5); color:#ffb3ae}
   .toast.ok{border-color:rgba(50,215,75,.4)}
   footer{
-    max-width:1060px; margin:0 auto; padding:0 26px 30px;
-    font-size:12px; color:var(--muted);
+    max-width:1080px; margin:0 auto; padding:0 28px 28px;
+    font-size:12px; color:var(--muted); position:relative; z-index:1;
   }
   .spin{
     width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.25);
@@ -153,8 +192,10 @@
 </style>
 </head>
 <body>
+<div class="blob b1"></div><div class="blob b2"></div>
+
 <header>
-  <div class="logo">S</div>
+  <div class="logo">🦆</div>
   <div class="htitle">
     <h1>Signal Manager</h1>
     <p id="subtitle">Đang tải…</p>
@@ -164,7 +205,11 @@
   <button class="btn primary" id="btnAdd">＋ Thêm account</button>
 </header>
 
-<main><div class="grid" id="grid"></div></main>
+<main>
+  <div class="hello" id="hello"></div>
+  <div class="chips" id="chips"></div>
+  <div class="grid" id="grid"></div>
+</main>
 <footer id="footer"></footer>
 
 <!-- Modal: thêm account -->
@@ -247,13 +292,12 @@
 'use strict';
 const token = new URLSearchParams(location.search).get('token') || '';
 const PALETTE = ['#3A76F0','#34C759','#FF9F0A','#FF453A','#BF5AF2','#5AC8FA','#FFD60A','#FF2D55'];
-let profiles = [];          // state hiện tại
-let sizeCache = {};         // name -> size_kb (giữ qua các lần poll fast)
-let busy = {};              // name -> 'opening' | 'quitting'
+let profiles = [];
+let sizeCache = {};
+let busy = {};
 let renderKey = '';
-let modalTarget = null;     // account đang thao tác trong modal
+let modalTarget = null;
 
-// ---------- API ----------
 async function api(path, body) {
   const res = await fetch(path, {
     method: body ? 'POST' : 'GET',
@@ -265,7 +309,6 @@ async function api(path, body) {
   return data;
 }
 
-// ---------- Helpers ----------
 const $ = s => document.querySelector(s);
 function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function fmtSize(kb){
@@ -276,6 +319,13 @@ function fmtSize(kb){
 }
 function dispName(p){ return p.nickname || (p.is_default ? 'Signal chính' : p.name); }
 function colorOf(p, i){ return p.color || PALETTE[i % PALETTE.length]; }
+function greeting(){
+  const h = new Date().getHours();
+  if (h < 11) return 'Chào buổi sáng 🌞';
+  if (h < 14) return 'Chào buổi trưa 🍜';
+  if (h < 18) return 'Chào buổi chiều ☕️';
+  return 'Chào buổi tối 🌙';
+}
 function toast(msg, cls){
   const t = document.createElement('div');
   t.className = 'toast ' + (cls || '');
@@ -297,7 +347,16 @@ function render(){
   renderKey = key;
 
   const running = profiles.filter(p => p.running).length;
+  const autoCount = profiles.filter(p => p.autostart).length;
+  const totalKb = profiles.reduce((s, p) => s + (sizeCache[p.name] || 0), 0);
+
+  $('#hello').textContent = greeting();
   $('#subtitle').textContent = profiles.length + ' account · ' + running + ' đang chạy';
+  $('#chips').innerHTML =
+    (running ? '<span class="chip"><span class="dot"></span><b>' + running + '</b>&nbsp;đang chạy</span>' : '') +
+    '<span class="chip">👥 <b>' + profiles.length + '</b>&nbsp;account</span>' +
+    '<span class="chip">💾 <b>' + fmtSize(totalKb) + '</b>&nbsp;dữ liệu</span>' +
+    (autoCount ? '<span class="chip">⚡ <b>' + autoCount + '</b>&nbsp;tự mở khi bật máy</span>' : '');
 
   const grid = $('#grid');
   grid.innerHTML = profiles.map((p, i) => {
@@ -313,9 +372,9 @@ function render(){
       : `<button class="btn primary" data-act="open" data-name="${esc(p.name)}">▶ Mở</button>`;
     const kb = sizeCache[p.name];
     return `
-    <div class="card">
+    <div class="card" style="animation-delay:${i*70}ms">
       <div class="card-top">
-        <div class="avatar" style="background:${c}">${esc(dispName(p).charAt(0).toUpperCase())}</div>
+        <div class="avatar ${p.running ? 'on' : 'off'}" style="background:${c}">${esc(dispName(p).charAt(0).toUpperCase())}</div>
         <div class="cinfo">
           <div class="cname">${esc(dispName(p))}</div>
           <div class="ctag">${p.is_default ? 'Bản chính' : 'Signal-' + esc(p.name)}</div>
@@ -329,10 +388,13 @@ function render(){
         <button data-act="reveal" data-name="${esc(p.name)}">📁 Mở thư mục dữ liệu</button>
         ${p.is_default ? '' : '<hr><button class="mdanger" data-act="del" data-name="' + esc(p.name) + '">🗑 Xóa account…</button>'}
       </div>
-      <div class="cmid">${pill}<span class="size">${fmtSize(kb)}</span>${p.autostart ? '<span class="size" title="Tự mở khi đăng nhập Mac">⚡ tự mở</span>' : ''}</div>
+      <div class="cmid">${pill}<span class="meta">💾 ${fmtSize(kb)}</span>${p.autostart ? '<span class="meta" title="Tự mở khi đăng nhập Mac">⚡ tự mở</span>' : ''}</div>
       <div class="cbtns">${mainBtn}</div>
     </div>`;
-  }).join('');
+  }).join('')
+  + `<div class="card ghost" data-ghost style="animation-delay:${profiles.length*70}ms">
+       <div class="plus">＋</div>Thêm account
+     </div>`;
 }
 
 // ---------- Poll ----------
@@ -340,16 +402,15 @@ async function refresh(fast){
   try {
     const data = await api('/api/state' + (fast ? '?fast=1' : ''));
     profiles = data.profiles;
-    updateFooter(data.version);
     for (const p of profiles) {
       if (p.size_kb != null) sizeCache[p.name] = p.size_kb;
-      // trạng thái thật đã đổi → bỏ cờ busy
       if (busy[p.name] === 'opening' && p.running) delete busy[p.name];
       if (busy[p.name] === 'quitting' && !p.running) delete busy[p.name];
     }
+    updateFooter(data.version);
     render();
   } catch (e) {
-    $('#subtitle').textContent = '⚠️ Mất kết nối server — mở lại Signal Manager.app';
+    $('#subtitle').textContent = '⚠️ Mất kết nối server — mở lại Signal Manager';
   }
 }
 setInterval(() => refresh(true), 3000);
@@ -361,9 +422,7 @@ async function doAction(act, name){
   const p = profiles.find(x => x.name === name);
   try {
     if (act === 'open') {
-      busy[name] = p && p.running ? undefined : 'opening';
-      if (busy[name] === undefined) delete busy[name];
-      render();
+      if (!(p && p.running)) { busy[name] = 'opening'; render(); }
       await api('/api/open', {name});
       if (p && p.running) toast('Đã focus cửa sổ ' + dispName(p), 'ok');
     } else if (act === 'quit') {
@@ -391,11 +450,12 @@ document.addEventListener('click', e => {
     document.getElementById('menu-' + menuBtn.dataset.menu).classList.add('open');
     return;
   }
+  if (e.target.closest('[data-ghost]')) { openAddModal(); return; }
   const btn = e.target.closest('[data-act]');
   if (!btn) return;
   const {act, name} = btn.dataset;
   const p = profiles.find(x => x.name === name);
-  if (act === 'del')      { openDelModal(p); }
+  if (act === 'del') { openDelModal(p); }
   else if (act === 'rename') {
     modalTarget = p;
     $('#renameInput').value = p.nickname || '';
@@ -421,12 +481,13 @@ $('#btnQuitAll').addEventListener('click', async () => {
 
 // Add
 const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$/;
-$('#btnAdd').addEventListener('click', () => {
+function openAddModal(){
   $('#addStep1').style.display = ''; $('#addStep2').style.display = 'none';
   $('#addName').value = ''; $('#addGo').disabled = true;
   $('#addHint').className = 'hint'; $('#addHint').textContent = 'Chỉ dùng chữ, số, gạch ngang, gạch dưới.';
   openModal('#ovAdd'); $('#addName').focus();
-});
+}
+$('#btnAdd').addEventListener('click', openAddModal);
 $('#addName').addEventListener('input', () => {
   const v = $('#addName').value.trim();
   const exists = profiles.some(p => p.name === v);
@@ -515,7 +576,6 @@ $('#swatches').addEventListener('click', async e => {
   } catch (e2) { toast(e2.message, 'err'); }
 });
 
-// Footer
 function updateFooter(v){
   $('#footer').textContent = 'Dữ liệu: ~/Library/Application Support/Signal-* · '
     + 'Tool không chính thức, không liên quan Signal Messenger LLC.' + (v ? ' · v' + v : '');
