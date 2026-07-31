@@ -60,6 +60,15 @@ Ngoài app quản lý, mỗi tài khoản còn có **icon riêng** trong thư m�
 **Cửa sổ Signal tự nhiên biến mất?**
 Signal vừa tự cập nhật phiên bản (2 tuần/lần). Mở lại bằng app quản lý hoặc icon — tin nhắn còn nguyên, không mất gì.
 
+**Signal hiện banner vàng "Cannot Update" / "Không thể cập nhật"?**
+Do nhiều cửa sổ Signal cùng chạy nên các trình cập nhật giẫm chân nhau. Cách xử (1 phút):
+trong app quản lý bấm **⏹ Tắt tất cả** → chờ ~1 phút (macOS tự hoàn tất cài bản mới ngay khi
+các cửa sổ đóng) → bấm **▶ Mở tất cả**. Nếu vẫn kẹt, dán vào Terminal rồi làm lại các bước trên:
+
+```bash
+rm -rf "$HOME/Library/Caches/org.whispersystems.signal-desktop.ShipIt"
+```
+
 **Không có tiếng "ting" khi tin nhắn tới?**
 Âm thanh cần bật ở **2 tầng**: ① *System Settings → Notifications → Signal* → Allow + tick "Play sound for notification"; ② **trong từng cửa sổ Signal** nhấn `⌘ + ,` → Notifications → bật + tick "Play audio notification" (mỗi tài khoản một cài đặt riêng!). Lưu ý: cửa sổ đang mở trước mặt thì Signal cố tình không kêu, và Focus/Do Not Disturb 🌙 đang bật cũng câm.
 
