@@ -13,6 +13,7 @@ Modes:
 
 import json
 import os
+import plistlib
 import re
 import secrets
 import subprocess
@@ -34,7 +35,9 @@ LOG_FILE = STATE_DIR / "server.log"
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$")
 COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 BASE = Path.home() / "Library" / "Application Support"
-VERSION = "2.8.0"
+VERSION = "2.9.0"
+SIGNAL_PLIST = Path("/Applications/Signal.app/Contents/Info.plist")
+SHIPIT_CACHE = Path.home() / "Library" / "Caches" / "org.whispersystems.signal-desktop.ShipIt"
 RAW_SELF = ("https://raw.githubusercontent.com/dev-lo-18tuoi/multi-signal/main/"
             "signal_manager_server.py")
 INSTALL_URL = ("https://raw.githubusercontent.com/dev-lo-18tuoi/multi-signal/main/"
@@ -294,11 +297,138 @@ def ping(info, timeout=1.0):
         return None
 
 
-# Watchdog 🛡 "Giữ luôn chạy": account bật keepalive mà bị đóng NGOÀI ý muốn
-# (vd Signal auto-update tự giết cửa sổ) → tự mở lại + thông báo macOS.
+def notify_mac(msg):
+    msg = msg.replace('"', "").replace("\\", "")
+    subprocess.run(
+        ["osascript", "-e",
+         'display notification "%s" with title "Signal Manager 🦆"' % msg],
+        check=False, timeout=10)
+
+
+def signal_version():
+    try:
+        with open(SIGNAL_PLIST, "rb") as f:
+            return plistlib.load(f).get("CFBundleShortVersionString", "?")
+    except Exception:
+        return "?"
+
+
+def latest_signal_version():
+    """Phiên bản Signal mới nhất theo feed chính thức; lỗi mạng → None."""
+    for host in ("updates.signal.org", "updates2.signal.org"):
+        try:
+            req = urllib.request.Request(
+                "https://%s/desktop/latest-mac.yml" % host,
+                headers={"User-Agent": "SignalManager/" + VERSION})  # CDN chặn UA mặc định của Python (403)
+            with urllib.request.urlopen(req, timeout=6) as r:
+                m = re.search(rb"^version:\s*([0-9.]+)", r.read(), re.M)
+                if m:
+                    return m.group(1).decode()
+        except Exception:
+            continue
+    return None
+
+
+def ver_tuple(v):
+    try:
+        return tuple(int(x) for x in str(v).split("."))
+    except ValueError:
+        return (0,)
+
+
+def running_profiles():
+    """Danh sách target đang chạy theo engine state (['default', '3', ...])."""
+    rc, out, _ = engine("state", "--fast", timeout=20)
+    if rc != 0:
+        return []
+    result = []
+    for p in json.loads(out):
+        if p.get("running"):
+            result.append("default" if p.get("is_default") else p["name"])
+    return result
+
+
+def update_stuck():
+    """Log của profile nào đó có lỗi updater trong 45 phút gần đây?"""
+    now = time.time()
+    for d in BASE.glob("Signal*"):
+        log = d / "logs" / "main.log"
+        if not log.is_file():
+            continue
+        try:
+            with open(log, "rb") as f:
+                f.seek(max(0, log.stat().st_size - 80_000))
+                tail = f.read().decode("utf-8", "replace")
+        except OSError:
+            continue
+        for line in tail.splitlines():
+            if '"level":50' not in line:
+                continue
+            if "Cannot_Update" not in line and "updater" not in line:
+                continue
+            m = re.search(r'"time":"([0-9T:.\-]+)Z?"', line)
+            if not m:
+                continue
+            try:
+                ts = time.mktime(time.strptime(m.group(1)[:19], "%Y-%m-%dT%H:%M:%S"))
+                # log ghi giờ UTC
+                if now - (ts - time.timezone) < 45 * 60:
+                    return True
+            except ValueError:
+                continue
+    return False
+
+
+_last_heal = {"at": 0.0}
+
+
+def heal_signal_update():
+    """Tự chữa update kẹt: tắt hết → macOS swap bundle → (nếu cần) dọn cache và
+    cho 1 instance tải lại → mở lại đúng các account đang chạy trước đó."""
+    saved = running_profiles()
+    if not saved:
+        return  # không có gì đang chạy — lần mở tới sẽ tự nhận bản mới
+    v0 = signal_version()
+    notify_mac("Signal có bản mới — đang tự cập nhật (~2 phút), các cửa sổ sẽ tạm đóng")
+    engine("quit", "all", timeout=60)
+    time.sleep(30)  # ShipIt thay bundle ngay khi mọi instance thoát
+    if signal_version() == v0:
+        # gói dàn dựng hỏng → dọn, cho MỘT instance tải lại một mình
+        subprocess.run(["rm", "-rf", str(SHIPIT_CACHE)], check=False)
+        engine("open", "default", timeout=30)
+        time.sleep(240)  # chờ tải bản mới (updater tự chạy lúc khởi động)
+        engine("quit", "default", timeout=60)
+        time.sleep(30)
+    v1 = signal_version()
+    for target in saved:
+        engine("open", target, timeout=30)
+        time.sleep(1)
+    if v1 != v0:
+        notify_mac("✅ Đã cập nhật Signal %s → %s, các account đã mở lại" % (v0, v1))
+    else:
+        notify_mac("⚠️ Chưa cập nhật được Signal — xem mục FAQ trên GitHub")
+        _last_heal["at"] = time.time() + 10 * 3600  # đừng thử lại liên tục
+
+
+# Watchdog 🛡: (1) "Giữ luôn chạy" — account bật keepalive bị đóng NGOÀI ý muốn
+# → tự mở lại; (2) mỗi ~10 phút khám log updater — Signal update kẹt do nhiều
+# instance → tự chữa theo quy trình heal_signal_update.
 def watchdog():
+    tick = 0
     while True:
         time.sleep(45)
+        tick += 1
+        try:
+            if tick % 13 == 0 and time.time() - _last_heal["at"] > 2 * 3600:
+                if update_stuck():
+                    latest = latest_signal_version()
+                    # chỉ chữa khi THẬT SỰ còn bản mới chưa cài (tránh vết lỗi cũ)
+                    if latest and ver_tuple(latest) > ver_tuple(signal_version()):
+                        _last_heal["at"] = time.time()
+                        heal_signal_update()
+                        continue
+        except Exception:
+            pass
         try:
             rc, out, _ = engine("state", "--fast", timeout=20)
             if rc != 0:

@@ -61,9 +61,12 @@ Ngoài app quản lý, mỗi tài khoản còn có **icon riêng** trong thư m�
 Signal vừa tự cập nhật phiên bản (2 tuần/lần). Mở lại bằng app quản lý hoặc icon — tin nhắn còn nguyên, không mất gì.
 
 **Signal hiện banner vàng "Cannot Update" / "Không thể cập nhật"?**
-Do nhiều cửa sổ Signal cùng chạy nên các trình cập nhật giẫm chân nhau. Cách xử (1 phút):
-trong app quản lý bấm **⏹ Tắt tất cả** → chờ ~1 phút (macOS tự hoàn tất cài bản mới ngay khi
-các cửa sổ đóng) → bấm **▶ Mở tất cả**. Nếu vẫn kẹt, dán vào Terminal rồi làm lại các bước trên:
+Do nhiều cửa sổ Signal cùng chạy nên các trình cập nhật giẫm chân nhau. **Từ v2.9.0 tool
+TỰ XỬ LÝ** — cứ để yên, trong vòng ~10 phút bạn sẽ thấy thông báo "đang tự cập nhật",
+các cửa sổ tạm đóng ~1–2 phút rồi tự mở lại với bản Signal mới. Không cần làm gì cả.
+
+Muốn xử tay cho nhanh (hoặc đang dùng bản cũ): bấm **⏹ Tắt tất cả** → chờ ~1 phút →
+**▶ Mở tất cả**. Nếu vẫn kẹt, dán vào Terminal rồi lặp lại các bước trên:
 
 ```bash
 rm -rf "$HOME/Library/Caches/org.whispersystems.signal-desktop.ShipIt"
