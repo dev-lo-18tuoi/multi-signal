@@ -336,6 +336,7 @@ let busy = {};
 let renderKey = '';
 let modalTarget = null;
 let lastVer = '';
+let sigInfo = null;   // {cur, latest} phiên bản Signal Desktop
 
 // ---------- Song ngữ VI/EN ----------
 let lang = localStorage.getItem('sm_lang')
@@ -382,6 +383,7 @@ vi: {
   conn_lost:'⚠️ Mất kết nối server — mở lại Signal Manager',
   footer:'Dữ liệu: ~/Library/Application Support/Signal-* · Tool không chính thức, không liên quan Signal Messenger LLC.',
   no_token:'Thiếu token — hãy mở từ Signal Manager.app',
+  chip_sig_ok:'✓ mới nhất', chip_sig_new:'🆕 có bản mới — tool sẽ tự cập nhật',
   m_clean:'🧹 Dọn cache', t_cleaned:'🧹 Đã giải phóng %s',
   t_clean_running:'Account đang chạy — tắt trước khi dọn cache',
   wel_title:'Chào mừng đến Signal Manager! 🦆',
@@ -432,6 +434,7 @@ en: {
   conn_lost:'⚠️ Lost connection to server — reopen Signal Manager',
   footer:'Data: ~/Library/Application Support/Signal-* · Unofficial tool, not affiliated with Signal Messenger LLC.',
   no_token:'Missing token — open via Signal Manager.app',
+  chip_sig_ok:'✓ up to date', chip_sig_new:'🆕 update available — auto-handled',
   m_clean:'🧹 Clean cache', t_cleaned:'🧹 Freed %s',
   t_clean_running:'Account is running — quit it before cleaning',
   wel_title:'Welcome to Signal Manager! 🦆',
@@ -489,7 +492,7 @@ document.querySelectorAll('.overlay').forEach(o =>
 
 // ---------- Render ----------
 function render(){
-  const key = JSON.stringify([profiles, busy, sizeCache]);
+  const key = JSON.stringify([profiles, busy, sizeCache, sigInfo]);
   if (key === renderKey) return;
   renderKey = key;
 
@@ -503,7 +506,10 @@ function render(){
     (running ? '<span class="chip"><span class="dot"></span><b>' + running + '</b>&nbsp;' + t('running') + '</span>' : '') +
     '<span class="chip">👥 <b>' + profiles.length + '</b>&nbsp;' + t('acc') + '</span>' +
     '<span class="chip">💾 <b>' + fmtSize(totalKb) + '</b>&nbsp;' + t('data') + '</span>' +
-    (autoCount ? '<span class="chip">⚡ <b>' + autoCount + '</b>&nbsp;' + t('auto_chip') + '</span>' : '');
+    (autoCount ? '<span class="chip">⚡ <b>' + autoCount + '</b>&nbsp;' + t('auto_chip') + '</span>' : '') +
+    (sigInfo && sigInfo.cur ? '<span class="chip">💬 Signal <b>' + esc(sigInfo.cur) + '</b>&nbsp;'
+      + ((sigInfo.latest && cmpVer(sigInfo.latest, sigInfo.cur) > 0) ? t('chip_sig_new') : t('chip_sig_ok'))
+      + '</span>' : '');
 
   const grid = $('#grid');
   grid.innerHTML = profiles.map((p, i) => {
@@ -743,6 +749,7 @@ function cmpVer(a, b){
 async function checkUpdate(){
   try {
     const d = await api('/api/latest');
+    if (d.signal_current) { sigInfo = {cur: d.signal_current, latest: d.signal_latest}; render(); }
     if (cmpVer(d.latest, d.current) > 0) {
       const b = $('#btnUpdate');
       b.style.display = '';

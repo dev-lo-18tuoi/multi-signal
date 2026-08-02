@@ -35,7 +35,7 @@ LOG_FILE = STATE_DIR / "server.log"
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$")
 COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 BASE = Path.home() / "Library" / "Application Support"
-VERSION = "2.9.0"
+VERSION = "2.9.1"
 SIGNAL_PLIST = Path("/Applications/Signal.app/Contents/Info.plist")
 SHIPIT_CACHE = Path.home() / "Library" / "Caches" / "org.whispersystems.signal-desktop.ShipIt"
 RAW_SELF = ("https://raw.githubusercontent.com/dev-lo-18tuoi/multi-signal/main/"
@@ -83,8 +83,9 @@ def profile_path(name):
 class Handler(BaseHTTPRequestHandler):
     server_version = "SignalManager/" + VERSION
 
-    def log_message(self, fmt, *args):  # gọn log
-        sys.stderr.write("%s %s\n" % (self.address_string(), fmt % args))
+    def log_message(self, fmt, *args):  # gọn log, có timestamp để lần vết sự cố
+        sys.stderr.write("%s %s %s\n" % (
+            time.strftime("%Y-%m-%d %H:%M:%S"), self.address_string(), fmt % args))
 
     # -- helpers --
     def _deny(self, code, msg):
@@ -146,7 +147,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/ping":
             return self._json({"ok": True, "version": VERSION})
         if path == "/api/latest":
-            # phiên bản mới nhất trên GitHub (cache 6h, lỗi mạng → coi như bằng hiện tại)
+            # phiên bản mới nhất trên GitHub + của Signal (cache 6h, lỗi mạng → coi như bằng hiện tại)
             now = time.time()
             if now - _latest_cache["at"] > 6 * 3600 or not _latest_cache["ver"]:
                 latest = VERSION
@@ -157,8 +158,12 @@ class Handler(BaseHTTPRequestHandler):
                             latest = m.group(1).decode()
                 except Exception:
                     pass
-                _latest_cache.update(at=now, ver=latest)
-            return self._json({"current": VERSION, "latest": _latest_cache["ver"]})
+                _latest_cache.update(at=now, ver=latest, sig=latest_signal_version())
+            return self._json({
+                "current": VERSION, "latest": _latest_cache["ver"],
+                "signal_current": signal_version(),
+                "signal_latest": _latest_cache.get("sig"),
+            })
         if path == "/api/state":
             fast = "fast" in parse_qs(urlparse(self.path).query)
             args = ["state", "--fast"] if fast else ["state"]
