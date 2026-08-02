@@ -4,8 +4,8 @@
 class SignalManager < Formula
   desc "Run multiple Signal Desktop accounts on one Mac, with a local dashboard"
   homepage "https://github.com/dev-lo-18tuoi/multi-signal"
-  url "https://github.com/dev-lo-18tuoi/multi-signal/archive/refs/tags/v2.9.0.tar.gz"
-  sha256 "4e8d0d02b9222a0fffc0eafa4ce9ee803980e664befa95ba2a80d09a6bec4f74"
+  url "https://github.com/dev-lo-18tuoi/multi-signal/archive/refs/tags/v2.9.1.tar.gz"
+  sha256 "3ebf19fa3f0c9bea6922d6796c21da937f3758b0668ac77dd0bb170ac72869bd"
   license "MIT"
 
   depends_on :macos
