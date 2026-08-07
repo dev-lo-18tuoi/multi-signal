@@ -35,7 +35,7 @@ LOG_FILE = STATE_DIR / "server.log"
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$")
 COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 BASE = Path.home() / "Library" / "Application Support"
-VERSION = "2.9.1"
+VERSION = "2.9.2"
 SIGNAL_PLIST = Path("/Applications/Signal.app/Contents/Info.plist")
 SHIPIT_CACHE = Path.home() / "Library" / "Caches" / "org.whispersystems.signal-desktop.ShipIt"
 RAW_SELF = ("https://raw.githubusercontent.com/dev-lo-18tuoi/multi-signal/main/"
@@ -318,8 +318,13 @@ def signal_version():
         return "?"
 
 
+_sig_feed = {"at": 0.0, "ver": None}  # cache feed Signal 15 phút (watchdog hỏi thường xuyên)
+
+
 def latest_signal_version():
     """Phiên bản Signal mới nhất theo feed chính thức; lỗi mạng → None."""
+    if time.time() - _sig_feed["at"] < 15 * 60 and _sig_feed["ver"]:
+        return _sig_feed["ver"]
     for host in ("updates.signal.org", "updates2.signal.org"):
         try:
             req = urllib.request.Request(
@@ -328,10 +333,17 @@ def latest_signal_version():
             with urllib.request.urlopen(req, timeout=6) as r:
                 m = re.search(rb"^version:\s*([0-9.]+)", r.read(), re.M)
                 if m:
-                    return m.group(1).decode()
+                    _sig_feed.update(at=time.time(), ver=m.group(1).decode())
+                    return _sig_feed["ver"]
         except Exception:
             continue
     return None
+
+
+def wlog(msg):
+    """Ghi dấu vết watchdog vào server.log (stderr đã trỏ về đó)."""
+    sys.stderr.write("%s [watchdog] %s\n" % (time.strftime("%Y-%m-%d %H:%M:%S"), msg))
+    sys.stderr.flush()
 
 
 def ver_tuple(v):
@@ -394,10 +406,12 @@ def heal_signal_update():
     if not saved:
         return  # không có gì đang chạy — lần mở tới sẽ tự nhận bản mới
     v0 = signal_version()
+    wlog("heal bắt đầu: %s → mới nhất %s, accounts %s" % (v0, latest_signal_version(), saved))
     notify_mac("Signal có bản mới — đang tự cập nhật (~2 phút), các cửa sổ sẽ tạm đóng")
     engine("quit", "all", timeout=60)
     time.sleep(30)  # ShipIt thay bundle ngay khi mọi instance thoát
     if signal_version() == v0:
+        wlog("bundle chưa đổi sau quit — dọn ShipIt cache, cho 1 instance tải lại")
         # gói dàn dựng hỏng → dọn, cho MỘT instance tải lại một mình
         subprocess.run(["rm", "-rf", str(SHIPIT_CACHE)], check=False)
         engine("open", "default", timeout=30)
@@ -409,8 +423,10 @@ def heal_signal_update():
         engine("open", target, timeout=30)
         time.sleep(1)
     if v1 != v0:
+        wlog("heal THÀNH CÔNG: %s → %s" % (v0, v1))
         notify_mac("✅ Đã cập nhật Signal %s → %s, các account đã mở lại" % (v0, v1))
     else:
+        wlog("heal THẤT BẠI: vẫn %s — lùi 10 tiếng" % v0)
         notify_mac("⚠️ Chưa cập nhật được Signal — xem mục FAQ trên GitHub")
         _last_heal["at"] = time.time() + 10 * 3600  # đừng thử lại liên tục
 
@@ -420,16 +436,26 @@ def heal_signal_update():
 # instance → tự chữa theo quy trình heal_signal_update.
 def watchdog():
     tick = 0
+    pending_since = None  # thời điểm đầu tiên thấy "có bản mới mà chưa cài được"
     while True:
         time.sleep(45)
         tick += 1
         try:
-            if tick % 13 == 0 and time.time() - _last_heal["at"] > 2 * 3600:
-                if update_stuck():
-                    latest = latest_signal_version()
-                    # chỉ chữa khi THẬT SỰ còn bản mới chưa cài (tránh vết lỗi cũ)
-                    if latest and ver_tuple(latest) > ver_tuple(signal_version()):
+            # check mỗi ~3 phút: phản ứng nhanh khi update kẹt
+            if tick % 4 == 0 and time.time() - _last_heal["at"] > 2 * 3600:
+                latest = latest_signal_version()
+                behind = latest and ver_tuple(latest) > ver_tuple(signal_version())
+                if not behind:
+                    pending_since = None
+                else:
+                    if pending_since is None:
+                        pending_since = time.time()
+                        wlog("phát hiện bản Signal mới %s (đang %s) — theo dõi" % (latest, signal_version()))
+                    # chữa khi: có lỗi updater tươi, HOẶC kẹt bản mới quá 20 phút
+                    # (bắt cả trường hợp updater bỏ cuộc im lặng, log không còn lỗi mới)
+                    if update_stuck() or time.time() - pending_since > 20 * 60:
                         _last_heal["at"] = time.time()
+                        pending_since = None
                         heal_signal_update()
                         continue
         except Exception:
