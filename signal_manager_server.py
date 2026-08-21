@@ -35,7 +35,7 @@ LOG_FILE = STATE_DIR / "server.log"
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$")
 COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 BASE = Path.home() / "Library" / "Application Support"
-VERSION = "2.9.2"
+VERSION = "2.9.3"
 SIGNAL_PLIST = Path("/Applications/Signal.app/Contents/Info.plist")
 SHIPIT_CACHE = Path.home() / "Library" / "Caches" / "org.whispersystems.signal-desktop.ShipIt"
 RAW_SELF = ("https://raw.githubusercontent.com/dev-lo-18tuoi/multi-signal/main/"
@@ -402,6 +402,7 @@ _last_heal = {"at": 0.0}
 def heal_signal_update():
     """Tự chữa update kẹt: tắt hết → macOS swap bundle → (nếu cần) dọn cache và
     cho 1 instance tải lại → mở lại đúng các account đang chạy trước đó."""
+    t0 = time.time()
     saved = running_profiles()
     if not saved:
         return  # không có gì đang chạy — lần mở tới sẽ tự nhận bản mới
@@ -426,9 +427,16 @@ def heal_signal_update():
         wlog("heal THÀNH CÔNG: %s → %s" % (v0, v1))
         notify_mac("✅ Đã cập nhật Signal %s → %s, các account đã mở lại" % (v0, v1))
     else:
-        wlog("heal THẤT BẠI: vẫn %s — lùi 10 tiếng" % v0)
-        notify_mac("⚠️ Chưa cập nhật được Signal — xem mục FAQ trên GitHub")
-        _last_heal["at"] = time.time() + 10 * 3600  # đừng thử lại liên tục
+        elapsed = int(time.time() - t0)
+        if elapsed > 700:
+            # ngân sách thật của heal ~6 phút — vượt xa nghĩa là máy NGỦ giữa
+            # chừng (không tải nổi bản mới), kết quả dang dở chứ không phải hỏng
+            wlog("heal DANG DỞ (máy ngủ giữa chừng, %ds) — thử lại sau 30 phút" % elapsed)
+            _last_heal["at"] = time.time() - 2 * 3600 + 30 * 60
+        else:
+            wlog("heal THẤT BẠI: vẫn %s — lùi 10 tiếng" % v0)
+            notify_mac("⚠️ Chưa cập nhật được Signal — xem mục FAQ trên GitHub")
+            _last_heal["at"] = time.time() + 10 * 3600  # đừng thử lại liên tục
 
 
 # Watchdog 🛡: (1) "Giữ luôn chạy" — account bật keepalive bị đóng NGOÀI ý muốn
