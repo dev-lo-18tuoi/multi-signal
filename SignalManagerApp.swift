@@ -6,16 +6,21 @@
 //      không cần mở dashboard. Đóng cửa sổ → app sống tiếp trên menu bar.
 
 import Cocoa
+import QuartzCore
 import WebKit
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelegate {
   var window: NSWindow?
   var statusItem: NSStatusItem!
-  // Thẻ tên nổi: hiện account đang focus để không nhắn lộn
+  // Thẻ tên nổi + viền phát sáng: nhận diện account đang focus, chống nhắn lộn
   var badgePanel: NSPanel?
   var badgeLabel: NSTextField?
+  var badgeGradient: CAGradientLayer?
+  var borderPanel: NSPanel?
+  var borderView: NSView?
   var pidProfile: [Int32: String] = [:]   // pid Signal → target profile
   var runningCount = 0
+  var badgeVisible = false
   let palette = ["#3A76F0", "#34C759", "#FF9F0A", "#FF453A",
                  "#BF5AF2", "#5AC8FA", "#E6B800", "#FF2D55"]
 
@@ -49,29 +54,77 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
   // ===== Thẻ tên nổi (chống nhắn lộn account) =====
 
-  private func makeBadgePanel() {
+  private func makeOverlayPanel() -> NSPanel {
     let panel = NSPanel(
-      contentRect: NSRect(x: 0, y: 0, width: 10, height: 30),
+      contentRect: NSRect(x: 0, y: 0, width: 10, height: 10),
       styleMask: [.borderless, .nonactivatingPanel],
       backing: .buffered, defer: false)
     panel.level = .statusBar
     panel.isOpaque = false
     panel.backgroundColor = .clear
+    panel.hasShadow = false
     panel.ignoresMouseEvents = true
     panel.hidesOnDeactivate = false
     panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+    return panel
+  }
+
+  private func makeBadgePanel() {
+    // thẻ tên: viên nang gradient + bóng đổ, chữ trắng đậm
+    let panel = makeOverlayPanel()
+    let container = NSView()
+    container.wantsLayer = true
+    let gradient = CAGradientLayer()
+    gradient.startPoint = CGPoint(x: 0, y: 1)
+    gradient.endPoint = CGPoint(x: 1, y: 0)
+    gradient.borderWidth = 2
+    gradient.borderColor = NSColor.white.withAlphaComponent(0.92).cgColor
+    container.layer?.addSublayer(gradient)
+    container.layer?.masksToBounds = false
+    container.shadow = NSShadow()
+    container.layer?.shadowColor = NSColor.black.cgColor
+    container.layer?.shadowOpacity = 0.35
+    container.layer?.shadowRadius = 6
+    container.layer?.shadowOffset = CGSize(width: 0, height: -2)
     let label = NSTextField(labelWithString: "")
     label.font = .boldSystemFont(ofSize: 15)
     label.textColor = .white
     label.alignment = .center
-    label.wantsLayer = true
-    label.layer?.cornerRadius = 11
-    label.layer?.masksToBounds = true
-    label.layer?.borderWidth = 2
-    label.layer?.borderColor = NSColor.white.withAlphaComponent(0.9).cgColor
-    panel.contentView = label
+    container.addSubview(label)
+    panel.contentView = container
     badgePanel = panel
     badgeLabel = label
+    badgeGradient = gradient
+
+    // viền phát sáng bao quanh toàn bộ cửa sổ đang focus
+    let bPanel = makeOverlayPanel()
+    let bView = NSView()
+    bView.wantsLayer = true
+    bView.layer?.backgroundColor = NSColor.clear.cgColor
+    bView.layer?.borderWidth = 3
+    bView.layer?.cornerRadius = 11
+    bView.layer?.masksToBounds = false
+    bView.layer?.shadowOpacity = 0.6
+    bView.layer?.shadowRadius = 10
+    bView.layer?.shadowOffset = .zero
+    bView.shadow = NSShadow()   // bật render shadow cho layer-backed NSView
+    bPanel.contentView = NSView()   // container trong suốt, chừa chỗ cho glow
+    bPanel.contentView?.wantsLayer = true
+    bPanel.contentView?.addSubview(bView)
+    borderPanel = bPanel
+    borderView = bView
+  }
+
+  private func darker(_ c: NSColor) -> NSColor {
+    let s = c.usingColorSpace(.deviceRGB) ?? c
+    return NSColor(red: s.redComponent * 0.72, green: s.greenComponent * 0.72,
+                   blue: s.blueComponent * 0.72, alpha: s.alphaComponent)
+  }
+
+  private func hideOverlays() {
+    badgePanel?.orderOut(nil)
+    borderPanel?.orderOut(nil)
+    badgeVisible = false
   }
 
   // Khung cửa sổ Signal đang nổi trên cùng của pid đó (API công khai,
@@ -142,7 +195,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     guard let front = NSWorkspace.shared.frontmostApplication,
           front.bundleIdentifier == "org.whispersystems.signal-desktop"
     else {
-      badgePanel?.orderOut(nil)
+      hideOverlays()
       statusItem.button?.title = runningCount > 0 ? "🦆\(runningCount)" : "🦆"
       return
     }
@@ -154,27 +207,57 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     let colorHex = (meta["color"] as? String).flatMap { $0.isEmpty ? nil : $0 }
       ?? palette[idx]
 
+    let color = nsColor(hex: colorHex)
     statusItem.button?.title = "🦆‣\(disp)"
-    guard let panel = badgePanel, let label = badgeLabel else { return }
-    label.stringValue = "  🦆 \(disp)  "
-    label.layer?.backgroundColor = nsColor(hex: colorHex).cgColor
+    guard let panel = badgePanel, let label = badgeLabel,
+          let gradient = badgeGradient,
+          let bPanel = borderPanel, let bView = borderView else { return }
+
+    let win = frontSignalWindowRect(pid: front.processIdentifier)
+
+    // --- viền phát sáng bao quanh cửa sổ đang focus ---
+    if let win = win {
+      let pad: CGFloat = 14   // chừa lề cho quầng glow
+      bView.frame = NSRect(x: pad, y: pad, width: win.width, height: win.height)
+      bView.layer?.borderColor = color.withAlphaComponent(0.95).cgColor
+      bView.layer?.shadowColor = color.cgColor
+      bPanel.setFrame(win.insetBy(dx: -pad, dy: -pad), display: true)
+      bPanel.orderFrontRegardless()
+    } else {
+      bPanel.orderOut(nil)
+    }
+
+    // --- viên nang tên account: gradient + bóng đổ, dán giữa thanh tiêu đề ---
+    label.stringValue = "🦆 \(disp)"
     label.sizeToFit()
-    let size = NSSize(width: label.frame.width + 22, height: 32)
-    // dán giữa thanh tiêu đề của CHÍNH cửa sổ Signal đang focus;
-    // không lấy được khung thì lui về góc trên-phải màn hình
+    let size = NSSize(width: label.frame.width + 34, height: 34)
+    gradient.frame = CGRect(origin: .zero, size: size)
+    gradient.cornerRadius = size.height / 2
+    gradient.colors = [color.cgColor, darker(color).cgColor]
+    label.frame = NSRect(x: 0, y: (size.height - label.frame.height) / 2,
+                         width: size.width, height: label.frame.height)
     var frame: NSRect
-    if let win = frontSignalWindowRect(pid: front.processIdentifier) {
-      frame = NSRect(x: win.midX - size.width / 2,
-                     y: win.maxY - size.height + 2,
+    if let win = win {
+      frame = NSRect(x: win.midX - size.width / 2, y: win.maxY - size.height + 4,
                      width: size.width, height: size.height)
     } else if let screen = NSScreen.main {
       let f = screen.visibleFrame
       frame = NSRect(x: f.maxX - size.width - 18, y: f.maxY - size.height - 6,
                      width: size.width, height: size.height)
     } else { return }
-    panel.setFrame(frame, display: true)
-    label.frame = NSRect(origin: .zero, size: size)
-    panel.orderFrontRegardless()
+    if badgeVisible {
+      // lướt mượt theo cửa sổ thay vì nhảy cục
+      NSAnimationContext.runAnimationGroup { ctx in
+        ctx.duration = 0.15
+        panel.animator().setFrame(frame, display: true)
+      }
+    } else {
+      panel.setFrame(frame, display: true)
+      panel.alphaValue = 0
+      panel.orderFrontRegardless()
+      panel.animator().alphaValue = 1
+      badgeVisible = true
+    }
   }
 
   // cập nhật số account đang chạy trên icon menu bar (chạy nền, không chặn UI)
