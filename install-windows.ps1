@@ -17,7 +17,33 @@ if (-not (Test-Path $signal)) {
 }
 
 New-Item -ItemType Directory -Path $dest -Force | Out-Null
-Invoke-WebRequest -UseBasicParsing -Uri "$repo/signal-manager.ps1" -OutFile (Join-Path $dest 'signal-manager.ps1')
+
+# File tải về phải nguyên vẹn: có BOM UTF-8 và parse được bằng PowerShell —
+# chống trường hợp CDN trả về bản cache cũ/hỏng
+function Test-GoodScript([string]$path) {
+  $bytes = [IO.File]::ReadAllBytes($path)
+  if ($bytes.Length -lt 3 -or $bytes[0] -ne 0xEF -or $bytes[1] -ne 0xBB -or $bytes[2] -ne 0xBF) {
+    return $false
+  }
+  $errs = $null
+  [void][System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$null, [ref]$errs)
+  return (-not $errs)
+}
+
+$psFile = Join-Path $dest 'signal-manager.ps1'
+$ok = $false
+foreach ($try in 1..3) {
+  # cache-buster: query khác nhau mỗi lần → CDN buộc phải lấy bản mới nhất
+  $cb = [DateTime]::UtcNow.Ticks
+  Invoke-WebRequest -UseBasicParsing -Uri "$repo/signal-manager.ps1?cb=$cb" -OutFile $psFile
+  if (Test-GoodScript $psFile) { $ok = $true; break }
+  Write-Host "File tải về chưa chuẩn (cache mạng?) — thử lại lần $try..."
+  Start-Sleep -Seconds 3
+}
+if (-not $ok) {
+  Write-Host '❌ Tải 3 lần vẫn lỗi — kiểm tra mạng rồi chạy lại lệnh cài.' -ForegroundColor Red
+  return
+}
 
 # shim .cmd để gọi ngắn gọn từ mọi terminal
 @"
