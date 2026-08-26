@@ -31,3 +31,47 @@ jobs:
           bash -n install.sh
           python3 -m py_compile signal_manager_server.py
           echo "OK: bash + python"
+  windows-e2e:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: E2E vong doi engine tren Windows that (Signal gia lap)
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # Signal gia lap: du de qua kiem tra ton tai + Start-Process khong treo
+          $sigDir = Join-Path $env:LOCALAPPDATA 'Programs\signal-desktop'
+          New-Item -ItemType Directory -Path $sigDir -Force | Out-Null
+          Copy-Item "$env:SystemRoot\System32\where.exe" (Join-Path $sigDir 'Signal.exe')
+
+          # cai bang installer LIVE (dung kenh nguoi dung that, co cache-buster)
+          irm "https://raw.githubusercontent.com/dev-lo-18tuoi/multi-signal/main/install-windows.ps1?cb=$([DateTime]::UtcNow.Ticks)" | iex
+          $cmd = "$env:LOCALAPPDATA\SignalManager\signal-manager.cmd"
+          if (-not (Test-Path $cmd)) { throw 'installer khong tao shim' }
+
+          # test dung ban engine cua commit nay (ghi de bang file tu checkout)
+          Copy-Item .\signal-manager.ps1 "$env:LOCALAPPDATA\SignalManager\signal-manager.ps1" -Force
+
+          & $cmd help | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'help loi' }
+
+          & $cmd add testacc
+          if ($LASTEXITCODE -ne 0) { throw 'add loi' }
+          if (-not (Test-Path "$env:APPDATA\Signal-testacc")) { throw 'thieu thu muc profile' }
+          $lnk = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Signal testacc.lnk'
+          if (-not (Test-Path $lnk)) { throw 'thieu shortcut desktop' }
+
+          $out = & $cmd list | Out-String
+          if ($out -notmatch 'testacc') { throw 'list khong thay account' }
+
+          & $cmd autostart testacc on
+          $k = Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'SignalManager-testacc' -ErrorAction SilentlyContinue
+          if (-not $k) { throw 'autostart khong ghi registry' }
+          & $cmd autostart testacc off
+
+          & $cmd remove testacc -Yes
+          if ($LASTEXITCODE -ne 0) { throw 'remove loi' }
+          if (Test-Path "$env:APPDATA\Signal-testacc") { throw 'remove khong xoa profile' }
+          if (Test-Path $lnk) { throw 'remove khong xoa shortcut' }
+
+          Write-Host 'E2E WINDOWS: TAT CA PASS'
