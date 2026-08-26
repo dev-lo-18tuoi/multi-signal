@@ -38,9 +38,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
       self.updateBadge()
     }
 
-    // theo dõi cửa sổ đang focus mỗi giây (rẻ: chỉ hỏi NSWorkspace)
+    // theo dõi cửa sổ đang focus (0.5s — thẻ tên bám mượt khi kéo cửa sổ)
     makeBadgePanel()
-    Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+    Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
       self.refreshFocusBadge()
     }
 
@@ -61,15 +61,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     panel.hidesOnDeactivate = false
     panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
     let label = NSTextField(labelWithString: "")
-    label.font = .boldSystemFont(ofSize: 13)
+    label.font = .boldSystemFont(ofSize: 15)
     label.textColor = .white
     label.alignment = .center
     label.wantsLayer = true
-    label.layer?.cornerRadius = 9
+    label.layer?.cornerRadius = 11
     label.layer?.masksToBounds = true
+    label.layer?.borderWidth = 2
+    label.layer?.borderColor = NSColor.white.withAlphaComponent(0.9).cgColor
     panel.contentView = label
     badgePanel = panel
     badgeLabel = label
+  }
+
+  // Khung cửa sổ Signal đang nổi trên cùng của pid đó (API công khai,
+  // KHÔNG cần quyền — chỉ đọc vị trí, không đọc nội dung/tên cửa sổ)
+  private func frontSignalWindowRect(pid: Int32) -> NSRect? {
+    guard let list = CGWindowListCopyWindowInfo(
+      [.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
+      as? [[String: Any]] else { return nil }
+    for w in list {  // danh sách xếp từ trên xuống → match đầu = cửa sổ nổi nhất
+      guard let owner = w[kCGWindowOwnerPID as String] as? Int32, owner == pid,
+            let layer = w[kCGWindowLayer as String] as? Int, layer == 0,
+            let bDict = w[kCGWindowBounds as String] as? NSDictionary,
+            let cg = CGRect(dictionaryRepresentation: bDict)
+      else { continue }
+      if cg.width < 200 || cg.height < 150 { continue }  // bỏ tooltip/panel vặt
+      // đổi hệ tọa độ CG (gốc trên-trái, y xuống) → Cocoa (gốc dưới-trái, y lên)
+      let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
+      return NSRect(x: cg.origin.x,
+                    y: primaryHeight - cg.origin.y - cg.height,
+                    width: cg.width, height: cg.height)
+    }
+    return nil
   }
 
   private func nsColor(hex: String) -> NSColor {
@@ -132,16 +156,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
     statusItem.button?.title = "🦆‣\(disp)"
     guard let panel = badgePanel, let label = badgeLabel else { return }
-    label.stringValue = "  🔒 \(disp)  "
+    label.stringValue = "  🦆 \(disp)  "
     label.layer?.backgroundColor = nsColor(hex: colorHex).cgColor
     label.sizeToFit()
-    let size = NSSize(width: label.frame.width + 16, height: 30)
-    if let screen = NSScreen.main {
+    let size = NSSize(width: label.frame.width + 22, height: 32)
+    // dán giữa thanh tiêu đề của CHÍNH cửa sổ Signal đang focus;
+    // không lấy được khung thì lui về góc trên-phải màn hình
+    var frame: NSRect
+    if let win = frontSignalWindowRect(pid: front.processIdentifier) {
+      frame = NSRect(x: win.midX - size.width / 2,
+                     y: win.maxY - size.height + 2,
+                     width: size.width, height: size.height)
+    } else if let screen = NSScreen.main {
       let f = screen.visibleFrame
-      panel.setFrame(NSRect(x: f.maxX - size.width - 18,
-                            y: f.maxY - size.height - 6,
-                            width: size.width, height: size.height), display: true)
-    }
+      frame = NSRect(x: f.maxX - size.width - 18, y: f.maxY - size.height - 6,
+                     width: size.width, height: size.height)
+    } else { return }
+    panel.setFrame(frame, display: true)
     label.frame = NSRect(origin: .zero, size: size)
     panel.orderFrontRegardless()
   }
