@@ -11,6 +11,13 @@ import WebKit
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelegate {
   var window: NSWindow?
   var statusItem: NSStatusItem!
+  // Thẻ tên nổi: hiện account đang focus để không nhắn lộn
+  var badgePanel: NSPanel?
+  var badgeLabel: NSTextField?
+  var pidProfile: [Int32: String] = [:]   // pid Signal → target profile
+  var runningCount = 0
+  let palette = ["#3A76F0", "#34C759", "#FF9F0A", "#FF453A",
+                 "#BF5AF2", "#5AC8FA", "#E6B800", "#FF2D55"]
 
   var resources: String { Bundle.main.resourcePath ?? "" }
   var enginePath: String { resources + "/signal-manager.sh" }
@@ -31,7 +38,112 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
       self.updateBadge()
     }
 
+    // theo dõi cửa sổ đang focus mỗi giây (rẻ: chỉ hỏi NSWorkspace)
+    makeBadgePanel()
+    Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+      self.refreshFocusBadge()
+    }
+
     showDashboard()
+  }
+
+  // ===== Thẻ tên nổi (chống nhắn lộn account) =====
+
+  private func makeBadgePanel() {
+    let panel = NSPanel(
+      contentRect: NSRect(x: 0, y: 0, width: 10, height: 30),
+      styleMask: [.borderless, .nonactivatingPanel],
+      backing: .buffered, defer: false)
+    panel.level = .statusBar
+    panel.isOpaque = false
+    panel.backgroundColor = .clear
+    panel.ignoresMouseEvents = true
+    panel.hidesOnDeactivate = false
+    panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+    let label = NSTextField(labelWithString: "")
+    label.font = .boldSystemFont(ofSize: 13)
+    label.textColor = .white
+    label.alignment = .center
+    label.wantsLayer = true
+    label.layer?.cornerRadius = 9
+    label.layer?.masksToBounds = true
+    panel.contentView = label
+    badgePanel = panel
+    badgeLabel = label
+  }
+
+  private func nsColor(hex: String) -> NSColor {
+    var h = hex
+    if h.hasPrefix("#") { h.removeFirst() }
+    guard let v = UInt32(h, radix: 16) else { return .systemBlue }
+    return NSColor(
+      red: CGFloat((v >> 16) & 0xFF) / 255,
+      green: CGFloat((v >> 8) & 0xFF) / 255,
+      blue: CGFloat(v & 0xFF) / 255, alpha: 0.95)
+  }
+
+  // pid Signal → target profile ("default" / tên) — tra ps 1 lần rồi cache
+  private func profileFor(pid: Int32) -> String {
+    if let cached = pidProfile[pid] { return cached }
+    let p = Process()
+    p.executableURL = URL(fileURLWithPath: "/bin/ps")
+    p.arguments = ["-p", "\(pid)", "-o", "command="]
+    let pipe = Pipe()
+    p.standardOutput = pipe
+    p.standardError = FileHandle.nullDevice
+    do { try p.run() } catch { return "default" }
+    p.waitUntilExit()
+    let cmd = String(data: pipe.fileHandleForReading.readDataToEndOfFile(),
+                     encoding: .utf8) ?? ""
+    var target = "default"
+    if let r = cmd.range(of: "--user-data-dir=") {
+      let dir = cmd[r.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
+      if let last = dir.components(separatedBy: "/").last, last.hasPrefix("Signal-") {
+        target = String(last.dropFirst("Signal-".count))
+      }
+    }
+    pidProfile[pid] = target
+    return target
+  }
+
+  private func metaEntry(_ name: String) -> [String: Any] {
+    guard let d = try? Data(contentsOf: URL(fileURLWithPath: metaPath)),
+          let m = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any]
+    else { return [:] }
+    let key = name == "default" ? "__default__" : name
+    return (m[key] as? [String: Any]) ?? [:]
+  }
+
+  private func refreshFocusBadge() {
+    guard let front = NSWorkspace.shared.frontmostApplication,
+          front.bundleIdentifier == "org.whispersystems.signal-desktop"
+    else {
+      badgePanel?.orderOut(nil)
+      statusItem.button?.title = runningCount > 0 ? "🦆\(runningCount)" : "🦆"
+      return
+    }
+    let target = profileFor(pid: front.processIdentifier)
+    let meta = metaEntry(target)
+    let disp = (meta["nickname"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+      ?? (target == "default" ? "Signal chính" : target)
+    let idx = ((target.hashValue % palette.count) + palette.count) % palette.count
+    let colorHex = (meta["color"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+      ?? palette[idx]
+
+    statusItem.button?.title = "🦆‣\(disp)"
+    guard let panel = badgePanel, let label = badgeLabel else { return }
+    label.stringValue = "  🔒 \(disp)  "
+    label.layer?.backgroundColor = nsColor(hex: colorHex).cgColor
+    label.sizeToFit()
+    let size = NSSize(width: label.frame.width + 16, height: 30)
+    if let screen = NSScreen.main {
+      let f = screen.visibleFrame
+      panel.setFrame(NSRect(x: f.maxX - size.width - 18,
+                            y: f.maxY - size.height - 6,
+                            width: size.width, height: size.height), display: true)
+    }
+    label.frame = NSRect(origin: .zero, size: size)
+    panel.orderFrontRegardless()
   }
 
   // cập nhật số account đang chạy trên icon menu bar (chạy nền, không chặn UI)
@@ -44,7 +156,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         running = arr.filter { ($0["running"] as? Bool) ?? false }.count
       }
       DispatchQueue.main.async {
-        self.statusItem.button?.title = running > 0 ? "🦆\(running)" : "🦆"
+        self.runningCount = running
+        // khi đang focus Signal, tiêu đề menu bar do refreshFocusBadge quản
+        if NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+            != "org.whispersystems.signal-desktop" {
+          self.statusItem.button?.title = running > 0 ? "🦆\(running)" : "🦆"
+        }
       }
     }
   }
