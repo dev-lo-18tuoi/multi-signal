@@ -198,6 +198,10 @@ function Set-ProfileAutostart([string]$n, [string]$m) {
     $value = '"' + $script:SignalExe + '" --user-data-dir="' + $d + '"'
   }
   if ($m -eq 'on') {
+    # máy mới tinh có thể chưa có sẵn khóa Run — Set-ItemProperty không tự tạo
+    if (-not (Test-Path $script:RunKey)) {
+      New-Item -Path $script:RunKey -Force | Out-Null
+    }
     Set-ItemProperty -Path $script:RunKey -Name $keyName -Value $value
     Write-Output "Đã bật tự mở cho '$n' khi đăng nhập Windows."
   } else {
