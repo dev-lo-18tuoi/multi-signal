@@ -1,4 +1,4 @@
-# Cài Signal Manager (BETA) lên Windows bằng 1 lệnh PowerShell:
+﻿# Cài Signal Manager (BETA) lên Windows bằng 1 lệnh PowerShell:
 #   irm https://raw.githubusercontent.com/dev-lo-18tuoi/multi-signal/main/install-windows.ps1 | iex
 #
 # Chỉ tải 1 file script về %LOCALAPPDATA%\SignalManager — không cài dịch vụ,

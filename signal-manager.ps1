@@ -1,4 +1,4 @@
-# signal-manager.ps1 — quản lý nhiều account Signal Desktop trên Windows (BETA).
+﻿# signal-manager.ps1 — quản lý nhiều account Signal Desktop trên Windows (BETA).
 # Mỗi account = 1 thư mục dữ liệu riêng (--user-data-dir), chạy song song được.
 #
 # Dùng:  .\signal-manager.ps1 <lệnh> [tên] [-Yes]
