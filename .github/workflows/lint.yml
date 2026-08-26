@@ -1,0 +1,33 @@
+# CI kiểm tra cú pháp trên đúng môi trường đích:
+# - Windows PowerShell 5.1 parse các file .ps1 (bắt lỗi kiểu BOM/encoding/cú pháp)
+# - macOS kiểm bash + python
+name: lint
+on: [push, pull_request]
+jobs:
+  powershell-parse:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse ps1 bang Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $failed = $false
+          foreach ($f in 'signal-manager.ps1','install-windows.ps1') {
+            $errs = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $f), [ref]$null, [ref]$errs)
+            if ($errs) {
+              $failed = $true
+              Write-Host "LOI trong ${f}:"
+              $errs | ForEach-Object { Write-Host ("  dong {0}: {1}" -f $_.Extent.StartLineNumber, $_.Message) }
+            } else { Write-Host "OK: $f" }
+          }
+          if ($failed) { exit 1 }
+  unix-syntax:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          bash -n signal-manager.sh
+          bash -n install.sh
+          python3 -m py_compile signal_manager_server.py
+          echo "OK: bash + python"
