@@ -174,7 +174,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
                      encoding: .utf8) ?? ""
     var target = "default"
     if let r = cmd.range(of: "--user-data-dir=") {
-      let dir = cmd[r.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
+      // đường dẫn có dấu cách ("Application Support") → cắt ở cờ kế tiếp " --"
+      var dir = String(cmd[r.upperBound...])
+      if let next = dir.range(of: " --") { dir = String(dir[..<next.lowerBound]) }
+      dir = dir.trimmingCharacters(in: .whitespacesAndNewlines)
       if let last = dir.components(separatedBy: "/").last, last.hasPrefix("Signal-") {
         target = String(last.dropFirst("Signal-".count))
       }

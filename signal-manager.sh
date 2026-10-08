@@ -15,6 +15,14 @@ PREFIX="Signal-"
 LAUNCHER_DIR="$HOME/Applications"
 AGENT_DIR="$HOME/Library/LaunchAgents"
 NAME_RE='^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$'
+# Chỉ bản chính được tự update: mọi instance dùng chung MỘT cache ShipIt (theo
+# bundle id), nhiều updater tải cùng lúc sẽ phá bản dàn dựng của nhau.
+# Phải đứng SAU --user-data-dir: app Electron đóng gói không có argv của script,
+# nên node-config (đọc argv từ index 2) bỏ qua tham số đầu tiên.
+NO_UPDATER='--NODE_CONFIG={"updatesEnabled":false}'
+# Server tạo file này trong lúc ShipIt thay bundle Signal — mở instance lúc đó
+# sẽ làm ShipIt hủy cài và xóa bản đã tải.
+UPDATE_LOCK="$BASE/Signal Manager/updating.lock"
 
 err() { printf 'Lỗi: %s\n' "$*" >&2; }
 die() { err "$*"; exit 1; }
@@ -173,11 +181,9 @@ cmd_autostart() { # $1=tên|default $2=on|off
     printf '  <key>Label</key><string>local.signal-autostart.%s</string>\n' "$name"
     printf '  <key>ProgramArguments</key>\n  <array>\n'
     printf '    <string>/usr/bin/open</string>\n'
-    if [[ $name == default ]]; then
-      printf '    <string>-a</string>\n    <string>%s</string>\n' "$SIGNAL_APP"
-    else
-      printf '    <string>-na</string>\n    <string>%s</string>\n' "$SIGNAL_APP"
-      printf '    <string>--args</string>\n    <string>--user-data-dir=%s</string>\n' "$dir"
+    printf '    <string>-na</string>\n    <string>%s</string>\n' "$SIGNAL_APP"
+    if [[ $name != default ]]; then
+      printf '    <string>--args</string>\n    <string>--user-data-dir=%s</string>\n    <string>%s</string>\n' "$dir" "$NO_UPDATER"
     fi
     printf '  </array>\n'
     printf '  <key>RunAtLoad</key><true/>\n'
@@ -205,23 +211,33 @@ EOF
 
 launch_profile() { # mở hoặc focus (singleton lock per-dir tự focus cửa sổ cũ)
   check_signal
-  open -na "$SIGNAL_APP" --args --user-data-dir="$1"
+  open -na "$SIGNAL_APP" --args --user-data-dir="$1" "$NO_UPDATER"
 }
+
+# Cần -n: thiếu nó, macOS thấy Signal.app (chung bundle với account phụ) đang
+# chạy thì chỉ focus cửa sổ đó chứ không mở bản chính
+launch_default() {
+  check_signal
+  open -na "$SIGNAL_APP"
+}
+
+# Lock cũ hơn 10 phút = server chết giữa chừng, bỏ qua
+update_locked() { [[ -n $(find "$UPDATE_LOCK" -mmin -10 2>/dev/null) ]]; }
 
 cmd_open() {
   local name=$1 dir
+  update_locked && die "Signal đang cài bản mới — đợi khoảng 1 phút rồi mở lại"
   case $name in
     all)
       check_signal
-      [[ -d "$BASE/Signal" ]] && open -a "$SIGNAL_APP"
+      if [[ -d "$BASE/Signal" ]]; then launch_default; fi
       while IFS= read -r name; do
         launch_profile "$(profile_dir "$name")"
         sleep 1
       done < <(profile_names)
       return ;;
     default)
-      check_signal
-      open -a "$SIGNAL_APP"
+      launch_default
       return ;;
   esac
   validate_name "$name"
@@ -328,7 +344,7 @@ make_launcher() { # tạo ~/Applications/Signal <tên>.app
   mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
   cat > "$app/Contents/MacOS/launcher" <<EOF
 #!/bin/sh
-exec "$SIGNAL_BIN" --user-data-dir="\$HOME/Library/Application Support/$PREFIX$name"
+exec "$SIGNAL_BIN" --user-data-dir="\$HOME/Library/Application Support/$PREFIX$name" '$NO_UPDATER'
 EOF
   chmod +x "$app/Contents/MacOS/launcher"
   # icon màu riêng theo account; lỗi thì dùng icon Signal
@@ -478,6 +494,13 @@ EOF
 </dict>
 </plist>
 EOF
+  # launcher/autostart tạo bởi bản cũ chưa có $NO_UPDATER → tạo lại
+  if [[ -x $SIGNAL_BIN ]]; then
+    while IFS= read -r f; do
+      if [[ -d "$LAUNCHER_DIR/Signal $f.app" ]]; then make_launcher "$f" >/dev/null; fi
+      if [[ -f $(agent_plist "$f") ]]; then cmd_autostart "$f" on >/dev/null; fi
+    done < <(profile_names)
+  fi
   if [[ $native -eq 1 ]]; then
     printf 'Đã cài (cửa sổ NATIVE): %s\n' "$app"
   else

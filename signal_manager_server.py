@@ -23,7 +23,7 @@ import time
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 HERE = Path(__file__).resolve().parent
 ENGINE = HERE / "signal-manager.sh"
@@ -32,10 +32,11 @@ STATE_DIR = Path.home() / "Library" / "Application Support" / "Signal Manager"
 RUNTIME_FILE = STATE_DIR / "server.json"
 META_FILE = STATE_DIR / "meta.json"
 LOG_FILE = STATE_DIR / "server.log"
+UPDATE_LOCK = STATE_DIR / "updating.lock"  # engine từ chối mở instance khi có file này
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$")
 COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 BASE = Path.home() / "Library" / "Application Support"
-VERSION = "2.11.0"
+VERSION = "2.12.1"
 SIGNAL_PLIST = Path("/Applications/Signal.app/Contents/Info.plist")
 SHIPIT_CACHE = Path.home() / "Library" / "Caches" / "org.whispersystems.signal-desktop.ShipIt"
 RAW_SELF = ("https://raw.githubusercontent.com/dev-lo-18tuoi/multi-signal/main/"
@@ -365,83 +366,98 @@ def running_profiles():
     return result
 
 
-def update_stuck():
-    """Log của profile nào đó có lỗi updater trong 45 phút gần đây?"""
-    now = time.time()
-    for d in BASE.glob("Signal*"):
-        log = d / "logs" / "main.log"
-        if not log.is_file():
-            continue
-        try:
-            with open(log, "rb") as f:
-                f.seek(max(0, log.stat().st_size - 80_000))
-                tail = f.read().decode("utf-8", "replace")
-        except OSError:
-            continue
-        for line in tail.splitlines():
-            if '"level":50' not in line:
-                continue
-            if "Cannot_Update" not in line and "updater" not in line:
-                continue
-            m = re.search(r'"time":"([0-9T:.\-]+)Z?"', line)
-            if not m:
-                continue
-            try:
-                ts = time.mktime(time.strptime(m.group(1)[:19], "%Y-%m-%dT%H:%M:%S"))
-                # log ghi giờ UTC
-                if now - (ts - time.timezone) < 45 * 60:
-                    return True
-            except ValueError:
-                continue
+def shipit_waiting():
+    """ShipIt của Signal đang chờ mọi instance thoát để thay bundle?"""
+    return subprocess.run(["pgrep", "-f", "signal-desktop.ShipIt"],
+                          capture_output=True).returncode == 0
+
+
+def staged_version():
+    """Bản Signal đã tải + dàn dựng xong và có ShipIt chờ cài; chưa có → None."""
+    try:
+        # đuôi .plist nhưng Squirrel ghi nội dung JSON
+        with open(SHIPIT_CACHE / "ShipItState.plist", encoding="utf-8") as f:
+            bundle = Path(unquote(urlparse(json.load(f)["updateBundleURL"]).path))
+        with open(bundle / "Contents" / "Info.plist", "rb") as f:
+            ver = plistlib.load(f).get("CFBundleShortVersionString")
+    except (OSError, KeyError, ValueError, plistlib.InvalidFileException):
+        return None
+    return ver if shipit_waiting() else None
+
+
+def swap_staged(v0):
+    """Tắt mọi instance cho ShipIt thay bundle. Instance bật lại giữa chừng
+    (Dock, bấm thông báo...) thì tắt tiếp; ShipIt mà thấy instance đang chạy
+    lúc nó kiểm tra sẽ bỏ cuộc → trả False để dàn dựng lại."""
+    t0 = time.time()
+    while time.time() - t0 < 90:
+        if signal_version() != v0:
+            return True
+        if running_profiles():
+            engine("quit", "all", timeout=60)
+        elif time.time() - t0 > 10 and not shipit_waiting():
+            break
+        time.sleep(2)
+    return signal_version() != v0
+
+
+def restage(latest):
+    """Chỉ bản chính còn updater → khởi động lại nó trên cache ShipIt sạch, đợi
+    nó dàn dựng (lấy từ update-cache của nó nếu đã tải, không thì tải mới)."""
+    engine("quit", "default", timeout=60)
+    time.sleep(5)
+    subprocess.run(["rm", "-rf", str(SHIPIT_CACHE)], check=False)
+    engine("open", "default", timeout=30)
+    deadline = time.time() + 20 * 60
+    while time.time() < deadline:
+        if staged_version() == latest:
+            return True
+        time.sleep(10)
     return False
 
 
-_last_heal = {"at": 0.0}
-
-
-def heal_signal_update():
-    """Tự chữa update kẹt: tắt hết → macOS swap bundle → (nếu cần) dọn cache và
-    cho 1 instance tải lại → mở lại đúng các account đang chạy trước đó."""
-    t0 = time.time()
+def heal_signal_update(latest):
+    """Cài bản Signal mới rồi mở lại đúng các account đang chạy trước đó."""
     saved = running_profiles()
     if not saved:
-        return  # không có gì đang chạy — lần mở tới sẽ tự nhận bản mới
+        return True  # không account nào chạy — ShipIt tự cài, không bật cửa sổ nào lên
     v0 = signal_version()
-    wlog("heal bắt đầu: %s → mới nhất %s, accounts %s" % (v0, latest_signal_version(), saved))
-    notify_mac("Signal có bản mới — đang tự cập nhật (~2 phút), các cửa sổ sẽ tạm đóng")
-    engine("quit", "all", timeout=60)
-    time.sleep(30)  # ShipIt thay bundle ngay khi mọi instance thoát
-    if signal_version() == v0:
-        wlog("bundle chưa đổi sau quit — dọn ShipIt cache, cho 1 instance tải lại")
-        # gói dàn dựng hỏng → dọn, cho MỘT instance tải lại một mình
-        subprocess.run(["rm", "-rf", str(SHIPIT_CACHE)], check=False)
-        engine("open", "default", timeout=30)
-        time.sleep(240)  # chờ tải bản mới (updater tự chạy lúc khởi động)
-        engine("quit", "default", timeout=60)
-        time.sleep(30)
-    v1 = signal_version()
-    for target in saved:
-        engine("open", target, timeout=30)
-        time.sleep(1)
-    if v1 != v0:
-        wlog("heal THÀNH CÔNG: %s → %s" % (v0, v1))
-        notify_mac("✅ Đã cập nhật Signal %s → %s, các account đã mở lại" % (v0, v1))
+    wlog("cài bản mới: %s → %s, accounts %s" % (v0, latest, saved))
+    notify_mac("Signal %s đã tải xong — đang cài, các cửa sổ tạm đóng vài giây" % latest)
+    ok = False
+    try:
+        for attempt in range(1, 4):
+            if staged_version() != latest:
+                wlog("chưa có bản dàn dựng hợp lệ — cho bản chính dàn dựng lại (lần %d)" % attempt)
+                if not restage(latest):
+                    wlog("bản chính không dàn dựng được trong 20 phút")
+                    break
+            UPDATE_LOCK.touch()
+            ok = swap_staged(v0)
+            UPDATE_LOCK.unlink(missing_ok=True)
+            if ok:
+                break
+            wlog("ShipIt chưa thay được bundle (có instance bật lại lúc cài?) — thử lại")
+    finally:
+        UPDATE_LOCK.unlink(missing_ok=True)
+        for target in saved:
+            engine("open", target, timeout=30)
+            time.sleep(1)
+    if ok:
+        wlog("cài THÀNH CÔNG: %s → %s" % (v0, signal_version()))
+        notify_mac("✅ Đã cập nhật Signal %s → %s, các account đã mở lại" % (v0, signal_version()))
     else:
-        elapsed = int(time.time() - t0)
-        if elapsed > 700:
-            # ngân sách thật của heal ~6 phút — vượt xa nghĩa là máy NGỦ giữa
-            # chừng (không tải nổi bản mới), kết quả dang dở chứ không phải hỏng
-            wlog("heal DANG DỞ (máy ngủ giữa chừng, %ds) — thử lại sau 30 phút" % elapsed)
-            _last_heal["at"] = time.time() - 2 * 3600 + 30 * 60
-        else:
-            wlog("heal THẤT BẠI: vẫn %s — lùi 10 tiếng" % v0)
-            notify_mac("⚠️ Chưa cập nhật được Signal — xem mục FAQ trên GitHub")
-            _last_heal["at"] = time.time() + 10 * 3600  # đừng thử lại liên tục
+        wlog("cài THẤT BẠI: vẫn %s — thử lại sau 30 phút" % v0)
+    return ok
+
+
+_heal_after = {"at": 0.0}
 
 
 # Watchdog 🛡: (1) "Giữ luôn chạy" — account bật keepalive bị đóng NGOÀI ý muốn
-# → tự mở lại; (2) mỗi ~10 phút khám log updater — Signal update kẹt do nhiều
-# instance → tự chữa theo quy trình heal_signal_update.
+# → tự mở lại; (2) Signal có bản mới → cài ngay khi bản chính dàn dựng xong
+# (hoặc ép dàn dựng lại nếu 12 tiếng vẫn chưa xong — Signal tự giãn lịch tải
+# theo đợt, log "isTimeToUpdate: updating in N minutes", có khi vài tiếng).
 def watchdog():
     tick = 0
     pending_since = None  # thời điểm đầu tiên thấy "có bản mới mà chưa cài được"
@@ -449,8 +465,7 @@ def watchdog():
         time.sleep(45)
         tick += 1
         try:
-            # check mỗi ~3 phút: phản ứng nhanh khi update kẹt
-            if tick % 4 == 0 and time.time() - _last_heal["at"] > 2 * 3600:
+            if tick % 4 == 0 and time.time() > _heal_after["at"]:
                 latest = latest_signal_version()
                 behind = latest and ver_tuple(latest) > ver_tuple(signal_version())
                 if not behind:
@@ -459,12 +474,10 @@ def watchdog():
                     if pending_since is None:
                         pending_since = time.time()
                         wlog("phát hiện bản Signal mới %s (đang %s) — theo dõi" % (latest, signal_version()))
-                    # chữa khi: có lỗi updater tươi, HOẶC kẹt bản mới quá 20 phút
-                    # (bắt cả trường hợp updater bỏ cuộc im lặng, log không còn lỗi mới)
-                    if update_stuck() or time.time() - pending_since > 20 * 60:
-                        _last_heal["at"] = time.time()
+                    if staged_version() == latest or time.time() - pending_since > 12 * 3600:
                         pending_since = None
-                        heal_signal_update()
+                        if not heal_signal_update(latest):
+                            _heal_after["at"] = time.time() + 30 * 60
                         continue
         except Exception:
             pass
